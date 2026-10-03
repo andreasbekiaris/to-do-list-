@@ -11,7 +11,7 @@ function unavailable() {
   );
 }
 
-// OAuth endpoints must be public so a logged-out user can authenticate.
+// Authentication endpoints must be public so a logged-out user can authenticate.
 export async function GET(request: NextRequest) {
   return isAuthConfigured() ? handlers.GET(request) : unavailable();
 }

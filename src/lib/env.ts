@@ -4,11 +4,14 @@ import { z } from "zod";
 
 const authEnvironment = z.object({
   AUTH_SECRET: z.string().min(32),
-  AUTH_GITHUB_ID: z.string().trim().min(1),
-  AUTH_GITHUB_SECRET: z.string().trim().min(1),
-  ALLOWED_GITHUB_ID: z.string().regex(/^[1-9]\d*$/),
+  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 });
 
 export function isAuthConfigured() {
   return authEnvironment.safeParse(process.env).success;
+}
+
+export function isRegistrationConfigured() {
+  const length = process.env.ACCOUNT_SETUP_KEY?.length ?? 0;
+  return isAuthConfigured() && length >= 16 && length <= 256;
 }

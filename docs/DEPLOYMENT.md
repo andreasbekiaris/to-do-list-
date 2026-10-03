@@ -1,56 +1,39 @@
-# Phase 1: Vercel, Neon, and GitHub setup
+# Username/password setup on Vercel
 
-The application builds without secrets and remains locked until authentication is configured. A build does not connect Neon or prove that OAuth works. These account setup steps happen in your own Vercel/GitHub accounts. Never paste secrets into chat or commit them.
+The app no longer uses GitHub login. It still needs Neon to store your account and tasks. No account/password is hardcoded or sent to the browser.
 
-## 1. Import the repository
+## 1. Connect the database
 
-1. Open [Vercel New Project](https://vercel.com/new).
-2. Under **Import Git Repository**, connect GitHub if needed and click **Import** next to `andreasbekiaris/to-do-list-`. The repository must have the Phase 1 code on `main` first.
-3. Keep **Framework Preset: Next.js** and **Root Directory: .**. Use **Node.js 24.x**. Under **Environment Variables**, add `ENABLE_EXPERIMENTAL_COREPACK=1` so Vercel honors the pinned pnpm version in `packageManager`. The repository specifies the install/build commands.
-4. Click **Deploy**. Until credentials exist, the public sign-in page shows that sign-in is unavailable; the private page stays closed.
-5. Copy the stable production domain from **Project → Settings → Domains**, such as `https://your-project.vercel.app` (use your actual domain).
-6. Under **Project → Settings → Environments → Production**, confirm **Branch Tracking** is `main`. If the UI places Production Branch under **Settings → Git**, set it there. Pushes to `main` then trigger production deployments.
+In [Vercel](https://vercel.com/dashboard), open the **to-do-list** project.
 
-## 2. Connect Neon through the Vercel Marketplace
+- If Neon is already connected, keep it.
+- Otherwise open [Neon in the Vercel Marketplace](https://vercel.com/marketplace/neon) → **Add Integration / Install**, create or select a Neon database, and connect it to this project for **Production**.
+- Confirm **Project → Settings → Environment Variables** contains the injected `DATABASE_URL`.
 
-1. Open [Neon in the Vercel Marketplace](https://vercel.com/marketplace/neon) and click **Add Integration** (or **Install**).
-2. Select the Vercel team/account containing the project. Create or select a Neon database and complete the Neon account connection if prompted.
-3. Connect the database to this Vercel project. Enable **Production**; enable **Development** with a separate Neon development branch if you want an isolated local database.
-4. In **Project → Settings → Environment Variables**, confirm the integration added `DATABASE_URL`. Leave its value managed by the integration. If a direct/unpooled URL is supplied, the migration command can use `DATABASE_URL_UNPOOLED`; otherwise it uses `DATABASE_URL`.
+Keep Node.js **24.x**, production branch **main**, and `ENABLE_EXPERIMENTAL_COREPACK=1` so Vercel uses the pinned pnpm version. Future pushes to `main` deploy automatically.
 
-## 3. Create a GitHub OAuth app
+## 2. Set the account configuration
 
-1. Open GitHub **Settings → Developer settings → OAuth Apps → New OAuth App** ([direct link](https://github.com/settings/applications/new)). Choose **OAuth App**, not GitHub App.
-2. Set **Application name** to `Thread`.
-3. Set **Homepage URL** to the stable production domain from step 1.
-4. Set **Authorization callback URL** to `https://YOUR-PRODUCTION-DOMAIN/api/auth/callback/github`.
-5. Click **Register application**. Copy **Client ID**, then click **Generate a new client secret**. Enter those directly in Vercel in the next step.
-6. Find your immutable numeric account ID at `https://api.github.com/users/YOUR-GITHUB-USERNAME`; use the JSON `id` field, not `node_id`, a username, or an OAuth client ID.
-
-## 4. Add production environment variables
-
-Open **Vercel → Project → Settings → Environment Variables → Add Environment Variable**. Scope the OAuth app credentials to **Production**.
+Open **Project → Settings → Environment Variables** and add these for **Production**:
 
 | Name | Value |
 | --- | --- |
-| `AUTH_GITHUB_ID` | OAuth app Client ID |
-| `AUTH_GITHUB_SECRET` | OAuth app Client secret |
-| `ALLOWED_GITHUB_ID` | Your GitHub numeric `id` |
-| `AUTH_SECRET` | A private, randomly generated secret of at least 32 characters |
-| `AUTH_URL` | Your stable production origin, e.g. `https://your-project.vercel.app` |
-| `DATABASE_URL` | Already injected by Neon; do not replace it with a placeholder |
+| `AUTH_SECRET` | Keep an existing valid secret, or generate a private random value of at least 32 characters |
+| `ACCOUNT_SETUP_KEY` | A separate private setup code, 16–256 characters; used only to create your account |
+| `AUTH_URL` | `https://to-do-list-ten-pi-88.vercel.app` |
+| `DATABASE_URL` | Supplied by the Neon integration |
 
-Generate `AUTH_SECRET` privately in your own terminal with this cross-platform Node command, then copy the output directly into Vercel:
+Generate a secret privately in your own terminal with:
 
 ```sh
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
-Do not set any of these as `NEXT_PUBLIC_` variables. The Anthropic key is not needed until Phase 3.
+Run it separately for `AUTH_SECRET` and `ACCOUNT_SETUP_KEY`. Copy each output directly into Vercel, never into chat or Git. Do not use `NEXT_PUBLIC_` names. The old `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, and `ALLOWED_GITHUB_ID` variables are no longer used.
 
-## 5. Apply the first migration
+## 3. Apply the account migration
 
-In a local checkout of this repository, install Node 24 and pnpm 11.19.0, then run:
+From a local checkout containing the latest `main` code:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -61,18 +44,25 @@ pnpm db:migrate
 pnpm db:check
 ```
 
-When `vercel link` asks, select the existing project you imported. If `.env.local` already exists, preserve it before pulling production values. The downloaded file is ignored by Git. These commands intentionally target the connected production database; `db:migrate` applies only unapplied checked-in migrations. `db:check` verifies both the connection and the `todos` table. Builds never run migrations automatically.
+Select the existing **to-do-list** project when linking. Preserve an existing `.env.local` first; the downloaded file is ignored by Git. These commands target production deliberately. The new migration creates the account and attempt-limit tables without deleting existing to-dos. Running migrations again is safe; Drizzle tracks which ones are applied. The final command checks all required tables without printing secrets.
 
-For local development afterward, pull Development variables into `.env.local` and use a **separate GitHub OAuth app** with homepage `http://localhost:3000` and callback `http://localhost:3000/api/auth/callback/github`. Set Development `AUTH_URL` to `http://localhost:3000`. A production OAuth app has a production callback and is not a substitute for a local app.
+For later local development, use Development variables and a separate Neon development branch; set local `AUTH_URL=http://localhost:3000`.
 
-## 6. Redeploy and verify Phase 1
+## 4. Redeploy and create your account
 
-1. Open **Vercel → Project → Deployments**, open the latest production deployment's **⋯** menu, and choose **Redeploy** so the new environment variables are applied.
-2. Open the stable production URL in a signed-out browser. It must show the sign-in page; direct `/` access must not reveal the workspace.
-3. Click **Continue with GitHub**, authorize with the allowed account, and confirm the protected workspace opens and greets you. Click **Sign out** and confirm `/` is protected again.
-4. Use a separate browser profile/private window signed into a **different GitHub account**. Complete GitHub authorization. It must return to the login page with “That GitHub account doesn’t have access.” Opening `/` afterward must still be denied.
-5. Share the production URL and whether both account checks passed. Do not share credentials. Stop here for Phase 1 review.
+1. Open **Vercel → Project → Deployments → latest deployment → ⋯ → Redeploy** so the new variables take effect.
+2. Open `https://to-do-list-ten-pi-88.vercel.app/register`.
+3. Choose a username (3–32 characters) and password (at least 12 characters), confirm the password, and enter the **ACCOUNT_SETUP_KEY** value as the setup code.
+4. Click **Create account**. Then log in with your new username/password.
+5. After creating the account, you may remove `ACCOUNT_SETUP_KEY` from Vercel and redeploy. It is not needed for login, and keeping it does not permit a second account.
 
-## What the local checks prove
+## 5. Verify Phase 1
 
-`pnpm test` tests the actual Auth.js allowlist callbacks and applies the real SQL migration to PGlite (Postgres compiled to WASM). `pnpm test:e2e` runs the production build on desktop/mobile Chromium with synthetic signed sessions and an intercepted OAuth handoff. These prove local request protection and form behavior, but do **not** verify your real GitHub OAuth app, live Neon credentials, Vercel deployment, or two real accounts. Those require the checks above.
+- Correct username/password opens the private workspace; **Sign out** returns to login.
+- A signed-out visit to `/` redirects to `/login`.
+- An incorrect password is rejected without revealing whether the username exists.
+- A new visit to `/register` redirects to login because the one owner account exists.
+- Log in with the same credentials on your phone to confirm access from another device.
+- `pnpm db:check` must succeed against the real Neon database.
+
+Local tests cover these flows with a local test database. Live deployment and Neon checks remain separate. Do not begin Phase 2 until this phase is reviewed.

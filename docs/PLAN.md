@@ -8,9 +8,9 @@ Stop after each phase and summarize for review. Phase 1 implementation is the cu
 
 - Next.js App Router, strict TypeScript, pnpm, Tailwind and shadcn/ui primitives.
 - Neon Postgres with Drizzle and the Neon HTTP driver; first SQL migration.
-- Auth.js GitHub OAuth restricted to `ALLOWED_GITHUB_ID`, including existing sessions.
+- Auth.js Credentials with username/password login and a one-time owner account creation flow. This replaces GitHub OAuth at the user's request.
 - A protected workspace page, a public login page, Vercel configuration, and agent conventions.
-- Acceptance: deploy to Vercel, sign in with the owner account, and reject a different real GitHub account.
+- Acceptance: deploy to Vercel, create the owner account using the private setup code, log in with its username/password, reject incorrect credentials, and prevent creation of a second account.
 
 ## Phase 2 — tasks
 
@@ -58,4 +58,4 @@ Stop after each phase and summarize for review. Phase 1 implementation is the cu
 | `created_at` | Timestamptz, defaults to now |
 | `updated_at` | Timestamptz, defaults to now; Drizzle updates on mutation |
 
-No user/session tables: there is exactly one authorized GitHub account and Auth.js uses encrypted JWT sessions. All requests that access private data must enforce that identity server-side. For date-only values, UTC midnight encodes a calendar date and display uses UTC date components; timed values are normal instants converted to the device timezone.
+`owner_accounts` stores the owner UUID, a unique normalized username, a salted password hash, creation time, and a unique/check-constrained singleton flag. `auth_attempts` stores two persistent rate-limit buckets. Auth.js uses encrypted JWT sessions and checks the stored owner UUID on each session read; all private data entry points require that session. No multi-user feature is introduced. For date-only values, UTC midnight encodes a calendar date and display uses UTC date components; timed values are normal instants converted to the device timezone.

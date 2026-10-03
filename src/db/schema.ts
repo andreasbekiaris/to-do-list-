@@ -46,3 +46,21 @@ export const todos = pgTable(
 
 export type Todo = typeof todos.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
+
+export const ownerAccounts = pgTable("owner_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  singleton: boolean("singleton").notNull().default(true).unique(),
+  username: varchar("username", { length: 32 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("owner_accounts_single_owner", sql`${table.singleton} = true`),
+  check("owner_accounts_username_format", sql`${table.username} ~ '^[a-z0-9._-]{3,32}$'`),
+]);
+
+// Shared across all Vercel instances; two fixed buckets keep storage bounded.
+export const authAttempts = pgTable("auth_attempts", {
+  bucket: varchar("bucket", { length: 32 }).primaryKey(),
+  attempts: integer("attempts").notNull(),
+  resetsAt: timestamp("resets_at", { withTimezone: true }).notNull(),
+});

@@ -1,40 +1,26 @@
 import type { NextAuthConfig } from "next-auth";
+import type { OwnerAccount } from "../db/account-repository";
 
-/** Compare only GitHub's immutable, numeric ID. Missing configuration denies all. */
-export function isAllowedGithubId(id: unknown, allowedId: string | undefined) {
-  return (
-    typeof id === "string" &&
-    typeof allowedId === "string" &&
-    /^[1-9]\d*$/.test(allowedId) &&
-    id === allowedId
-  );
-}
-
-export function createAuthCallbacks(allowedId: string | undefined) {
+export function createAuthCallbacks(getOwner: () => Promise<OwnerAccount | null>) {
   return {
-    signIn({ account }) {
-      return (
-        account?.provider === "github" &&
-        isAllowedGithubId(account.providerAccountId, allowedId)
-      );
-    },
-    jwt({ token, account }) {
-      if (account) {
-        if (
-          account.provider !== "github" ||
-          !isAllowedGithubId(account.providerAccountId, allowedId)
-        ) {
-          return null;
-        }
-        token.githubId = account.providerAccountId;
+    async jwt({ token, user, account }) {
+      if (user) {
+        if (account?.provider !== "credentials" || !user.id) return null;
+        token.ownerId = user.id;
       }
-
-      // Recheck existing sessions, including after the allowlist changes.
-      return isAllowedGithubId(token.githubId, allowedId) ? token : null;
+      if (typeof token.ownerId !== "string") return null;
+      try {
+        const owner = await getOwner();
+        if (!owner || owner.id !== token.ownerId) return null;
+        token.name = owner.username;
+        return token;
+      } catch {
+        return null;
+      }
     },
     session({ session, token }) {
-      session.user.githubId =
-        typeof token.githubId === "string" ? token.githubId : "";
+      session.user.id = typeof token.ownerId === "string" ? token.ownerId : "";
+      session.user.name = token.name;
       return session;
     },
   } satisfies NonNullable<NextAuthConfig["callbacks"]>;

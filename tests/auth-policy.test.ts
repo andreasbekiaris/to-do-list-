@@ -1,42 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAuthCallbacks, isAllowedGithubId } from "../src/lib/auth-policy";
+import type { JWT } from "next-auth/jwt";
+import { createAuthCallbacks } from "../src/lib/auth-policy";
 
-test("the allowlist accepts exactly one numeric GitHub account ID", () => {
-  assert.equal(isAllowedGithubId("42", "42"), true);
-  for (const id of [undefined, null, 42, "43", "andreasbekiaris", "042", " 42", "42 "]) {
-    assert.equal(isAllowedGithubId(id, "42"), false);
-  }
+const owner = { id: "00000000-0000-4000-8000-000000000042", username: "owner", passwordHash: "never-expose-this" };
+const callbacks = createAuthCallbacks(async () => owner);
+// Auth.js omits `user` on session refresh, despite its callback parameter type.
+const refresh = (token: JWT, session?: unknown) => callbacks.jwt({ token, session, trigger: "update" } as Parameters<typeof callbacks.jwt>[0]);
+
+test("credential sessions use the database owner's ID and expose no password hash", async () => {
+  const token = await callbacks.jwt({ token: {}, user: { id: owner.id }, account: { provider: "credentials", type: "credentials", providerAccountId: owner.id } });
+  assert.equal(token?.ownerId, owner.id);
+  assert.equal(token?.name, owner.username);
+  assert.equal(token?.passwordHash, undefined);
 });
 
-test("missing, blank, and malformed allowlist configuration denies access", () => {
-  for (const allowed of [undefined, "", "0", "andreasbekiaris", "42,43", " 42", "42\n"]) {
-    assert.equal(isAllowedGithubId(allowed, allowed), false);
-  }
+test("old GitHub sessions, other accounts, and client-supplied identity updates are rejected", async () => {
+  assert.equal(await refresh({ githubId: "42" }), null);
+  assert.equal(await refresh({ ownerId: "another-account" }, { ownerId: owner.id }), null);
+  assert.equal((await refresh({ ownerId: owner.id }, { ownerId: "another-account", name: "changed" }))?.ownerId, owner.id);
+  assert.equal(await callbacks.jwt({ token: {}, user: { id: owner.id }, account: { provider: "github", type: "oauth", providerAccountId: owner.id } }), null);
 });
 
-test("the Auth.js signIn callback denies other accounts and providers", () => {
-  const callbacks = createAuthCallbacks("42");
-  const user = { id: "untrusted-local-id" };
-  assert.equal(callbacks.signIn({ user, account: { type: "oauth", provider: "github", providerAccountId: "42" } }), true);
-  assert.equal(callbacks.signIn({ user, account: { type: "oauth", provider: "github", providerAccountId: "43" } }), false);
-  assert.equal(callbacks.signIn({ user, account: { type: "oauth", provider: "other", providerAccountId: "42" } }), false);
-  assert.equal(callbacks.signIn({ user, account: null }), false);
-  assert.equal(createAuthCallbacks(undefined).signIn({ user, account: { type: "oauth", provider: "github", providerAccountId: "42" } }), false);
-});
-
-test("JWT identity comes from GitHub and cannot be changed by a session update", () => {
-  const callbacks = createAuthCallbacks("42");
-  const user = { id: "ignored" };
-  const token = callbacks.jwt({ token: {}, user, account: { type: "oauth", provider: "github", providerAccountId: "42" } });
-  assert.equal(token?.githubId, "42");
-  assert.equal(callbacks.jwt({ token: { githubId: "42" }, user, trigger: "update", session: { githubId: "43" } })?.githubId, "42");
-  assert.equal(callbacks.jwt({ token: { githubId: "43" }, user, trigger: "update", session: { githubId: "42" } }), null);
-});
-
-test("changing or removing the allowlist revokes an existing session", () => {
-  const user = { id: "ignored" };
-  assert.equal(createAuthCallbacks("43").jwt({ token: { githubId: "42" }, user }), null);
-  assert.equal(createAuthCallbacks(undefined).jwt({ token: { githubId: "42" }, user }), null);
-  assert.equal(createAuthCallbacks("42").jwt({ token: {}, user }), null);
+test("deleted accounts and database failures close existing sessions", async () => {
+  const input = { token: { ownerId: owner.id } } as Parameters<typeof callbacks.jwt>[0];
+  assert.equal(await createAuthCallbacks(async () => null).jwt(input), null);
+  assert.equal(await createAuthCallbacks(async () => { throw new Error("database unavailable"); }).jwt(input), null);
 });
