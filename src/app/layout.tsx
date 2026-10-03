@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/geist";
 import "./globals.css";
 
@@ -6,7 +6,12 @@ export const metadata: Metadata = {
   title: { default: "Thread — Your personal space", template: "%s · Thread" },
   description: "A quiet, private place for your plans and the small steps that make them happen.",
   robots: { index: false, follow: false },
+  applicationName: "Thread",
+  appleWebApp: { capable: true, title: "Thread", statusBarStyle: "default" },
+  icons: { apple: "/icons/thread-180.png" },
 };
+
+export const viewport: Viewport = { themeColor: "#2e5947" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

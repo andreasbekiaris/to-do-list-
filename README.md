@@ -1,8 +1,23 @@
 # Thread
 
-A private, single-user nested to-do app for desktop and phone. One Next.js app hosted on Vercel; installable PWA support comes in Phase 4.
+A private, single-user nested to-do app for desktop and phone. One Next.js app hosted on Vercel, installable in its own window on supported desktop and mobile browsers.
 
-**Current scope: Phase 2.** Username/password accounts and a working nested task dashboard are implemented. AI writing and installable PWA support remain later phases.
+Username/password accounts, nested tasks, and desktop installation are implemented. At the user's request, installation was brought forward ahead of AI writing, which remains deferred.
+
+## Install on your desktop
+
+Open https://to-do-list-ten-pi-88.vercel.app in your regular browser and sign in. Use **Install app** in Thread's header for the native installation prompt when available, or follow these browser steps:
+
+- **Windows, Chrome:** use the install icon at the right of the address bar, or the menu's install option (often under Cast, save, and share). Confirm installation, then pin Thread to the taskbar or Start menu.
+- **Windows, Edge:** open the browser menu → Apps → Install this site as an app. Confirm and choose the available pin/shortcut options.
+- **Mac, Safari (macOS Sonoma or later):** File → Add to Dock → Add. Launch Thread from your Dock.
+- **Mac, Chrome:** use the address-bar install icon or the browser's install menu. You can keep the app in your Dock.
+- **iPhone/iPad:** Safari → Share → Add to Home Screen.
+- **Android:** Chrome menu → Install app / Add to Home screen.
+
+Installation must be confirmed on your device. Browser menu wording can vary; the in-app browser inside Codex is not the place to install it. Use the same username/password everywhere; Safari's installed app may ask you to sign in again. Thread uses the same Neon database across devices and refreshes when you return to the window or regain connectivity. An open editor is left undisturbed.
+
+Internet access is required to load and save tasks. There is no service-worker cache, offline editing, or background sync of private task data. Modern Chromium installation uses the manifest directly; Safari provides Add to Dock. Updates arrive from the website without downloading a separate executable.
 
 ## Use your task dashboard
 
@@ -10,7 +25,7 @@ A private, single-user nested to-do app for desktop and phone. One Next.js app h
 - Open a task to edit it or **Add subtask**. Subtasks can contain further subtasks; breadcrumbs take you back through the tree.
 - **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
 - Check a task to complete it. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
-- Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you navigate or refresh.
+- Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you return to the app, navigate, or refresh.
 
 This phase uses the existing `todos` table and requires no additional migration. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
 

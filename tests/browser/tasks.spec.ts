@@ -35,6 +35,7 @@ test("three-level tree persists across devices, edits notes and dates, completes
   const rootUrl = page.url();
   await add(page, "Kitchen", true);
   await page.getByRole("link", { name: "Kitchen", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Kitchen", exact: true })).toBeVisible();
   await add(page, "Fix the sink", true);
   await page.getByRole("link", { name: "Fix the sink", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Fix the sink", exact: true })).toBeVisible();
@@ -89,7 +90,7 @@ test("deadline filters, search, timed editing and optimistic failure rollback", 
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.route("**/tasks/*", async route => { if (route.request().method() === "POST") await route.abort(); else await route.continue(); });
   await page.getByRole("checkbox", { name: "Complete Future trip", exact: true }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Couldn't update" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Complete Future trip", exact: true })).not.toBeChecked();
   await page.unroute("**/tasks/*");
   await page.getByRole("checkbox", { name: "Complete Future trip", exact: true }).click();
@@ -120,4 +121,20 @@ test("anonymous action replay cannot create tasks or read a private task page", 
   await page.reload();
   await expect(page.getByRole("link", { name: "Authorized task", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Unauthorized task", exact: true })).toHaveCount(0);
+});
+
+test("installation help is accessible and returning to the app refreshes saved tasks", async ({ page, context }) => {
+  await page.getByRole("button", { name: "Install Thread", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Thread on your desktop" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Windows · Chrome or Edge" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mac · Safari" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  const other = await context.newPage();
+  await other.goto("/");
+  await add(other, "Added on another device");
+  await page.bringToFront();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByRole("link", { name: "Added on another device", exact: true })).toBeVisible();
+  await other.close();
 });

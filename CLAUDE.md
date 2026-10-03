@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. Work on only the current phase and STOP after each phase for review. The user has confirmed production login and authorized Phase 2. Stop after Phase 2; AI and PWA are later phases. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and requested desktop installation after Phase 2. Phase 4 installation and refresh-on-return are authorized ahead of Phase 3; AI remains deferred. Stop after the desktop installation work. Keep local test results separate from production checks.
 
 ## Conventions
 
