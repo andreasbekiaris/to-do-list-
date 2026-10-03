@@ -55,6 +55,28 @@ export function createTodoRepository(execute: Execute) {
       SELECT EXISTS(SELECT 1 FROM todos WHERE id=${id}::uuid) AS found, EXISTS(SELECT 1 FROM changed) AS changed, ids FROM pending`);
       return mutationSchema.parse(result.rows[0]);
     },
+    async move(id: string, parentId: string | null) {
+      // Refuses a parent inside the task's own subtree (that would detach it from the tree).
+      const result = await execute(sql`WITH RECURSIVE subtree AS (
+        SELECT id FROM todos WHERE id=${id}::uuid
+        UNION ALL SELECT t.id FROM todos t JOIN subtree s ON t.parent_id=s.id
+      ) UPDATE todos SET parent_id=${parentId}::uuid, updated_at=now() WHERE id=${id}::uuid
+        AND (${parentId}::uuid IS NULL OR (EXISTS (SELECT 1 FROM todos WHERE id=${parentId}::uuid)
+          AND ${parentId}::uuid NOT IN (SELECT id FROM subtree))) RETURNING id`);
+      return result.rows.length > 0;
+    },
+    async adoptChildren(fromId: string, toId: string) {
+      // Moves fromId's direct children under toId, unless toId sits inside fromId's subtree.
+      const result = await execute(sql`WITH RECURSIVE subtree AS (
+        SELECT id FROM todos WHERE id=${fromId}::uuid
+        UNION ALL SELECT t.id FROM todos t JOIN subtree s ON t.parent_id=s.id
+      ), allowed AS (SELECT EXISTS (SELECT 1 FROM todos WHERE id=${toId}::uuid)
+          AND ${toId}::uuid NOT IN (SELECT id FROM subtree) AS ok),
+      moved AS (UPDATE todos SET parent_id=${toId}::uuid, updated_at=now()
+        WHERE parent_id=${fromId}::uuid AND (SELECT ok FROM allowed) RETURNING id)
+      SELECT (SELECT ok FROM allowed) AS ok, (SELECT count(*)::int FROM moved) AS moved`);
+      return z.object({ ok: z.boolean(), moved: z.coerce.number() }).parse(result.rows[0]);
+    },
     async remove(id: string, expectedIds: string[]) {
       const result = await execute(sql`WITH RECURSIVE subtree AS (
         SELECT id FROM todos WHERE parent_id=${id}::uuid

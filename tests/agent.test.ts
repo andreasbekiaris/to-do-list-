@@ -1,0 +1,92 @@
+import assert from "node:assert/strict";
+import { after, before, beforeEach, test } from "node:test";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { createTodoRepository } from "../src/db/todo-repository";
+import { agentToken, runOperation, tokenMatches } from "../src/lib/agent-api";
+const client = new PGlite();
+const db = drizzle(client);
+const repository = createTodoRepository(query => db.execute(query));
+const run = (body: unknown) => runOperation(repository, body);
+before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
+beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
+after(async () => { await client.close(); });
+async function add(title: string, extra: Record<string, unknown> = {}) {
+  const result = await run({ op: "add", title, ...extra });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  return result.body.id as string;
+}
+test("the token must be long and must match exactly", () => {
+  const token = "x".repeat(40);
+  assert.equal(agentToken({}), null);
+  assert.equal(agentToken({ JARVIS_API_TOKEN: "short" }), null);
+  assert.equal(agentToken({ JARVIS_API_TOKEN: token }), token);
+  assert.equal(tokenMatches(`Bearer ${token}`, token), true);
+  assert.equal(tokenMatches(`Bearer ${token}x`, token), false);
+  assert.equal(tokenMatches(token, token), false);
+  assert.equal(tokenMatches(null, token), false);
+});
+test("add and edit validate like the app and keep unchanged fields", async () => {
+  const root = await add("Plan the week", { description: "Notes", dueAt: "2026-10-05T00:00:00.000Z", allDay: true });
+  const child = await add("Book the gym", { parentId: root });
+  assert.equal((await run({ op: "add", title: "   " })).status, 400);
+  assert.equal((await run({ op: "add", title: "Orphan", parentId: crypto.randomUUID() })).status, 404);
+  assert.equal((await run({ op: "edit", id: root, title: "Plan the week properly" })).status, 200);
+  const detail = await repository.detail(root);
+  assert.equal(detail?.title, "Plan the week properly");
+  assert.equal(detail?.description, "Notes");
+  assert.equal(detail?.allDay, true);
+  assert.equal((await run({ op: "edit", id: child, dueAt: null })).status, 200);
+  assert.equal((await repository.detail(child))?.color, "sage");
+  assert.equal((await run({ op: "edit", id: child, color: "rose" })).status, 200);
+  assert.equal((await repository.detail(child))?.color, "rose");
+  assert.equal((await run({ op: "edit", id: child, title: "Renamed" })).status, 200);
+  assert.equal((await repository.detail(child))?.color, "rose");
+  assert.equal((await run({ op: "add", title: "Bad colour", color: "pink" })).status, 400);
+  assert.equal((await run({ op: "bogus" })).status, 400);
+});
+test("complete only the task, or the whole subtree when asked", async () => {
+  const root = await add("Root");
+  const child = await add("Child", { parentId: root });
+  assert.equal((await run({ op: "complete", id: root })).status, 200);
+  assert.equal((await repository.detail(child))?.isDone, false);
+  await run({ op: "complete", id: root, done: false });
+  const tree = await run({ op: "complete", id: root, includeSubtasks: true });
+  assert.equal(tree.body.completedSubtasks, 1);
+  assert.equal((await repository.detail(child))?.isDone, true);
+});
+test("delete removes the whole subtree and reports it", async () => {
+  const root = await add("Root");
+  await add("Child", { parentId: root });
+  const other = await add("Other");
+  const result = await run({ op: "delete", id: root });
+  assert.equal(result.body.deletedSubtasks, 1);
+  assert.deepEqual((await repository.list()).map(task => task.id), [other]);
+  assert.equal((await run({ op: "delete", id: root })).status, 404);
+});
+test("move refuses cycles and accepts root", async () => {
+  const root = await add("Root");
+  const child = await add("Child", { parentId: root });
+  assert.equal((await run({ op: "move", id: root, parentId: child })).status, 400);
+  assert.equal((await run({ op: "move", id: root, parentId: root })).status, 400);
+  assert.equal((await run({ op: "move", id: child, parentId: null })).status, 200);
+  assert.equal((await repository.detail(child))?.parentId, null);
+});
+test("merge keeps the target, adopts subtasks, combines notes and deletes the duplicate", async () => {
+  const target = await add("Buy groceries", { description: "Milk" });
+  const source = await add("Grocery shopping", { description: "Eggs", dueAt: "2026-10-06T00:00:00.000Z", allDay: true });
+  const sub = await add("Bread", { parentId: source });
+  const result = await run({ op: "merge", id: source, intoId: target });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.movedSubtasks, 1);
+  const merged = await repository.detail(target);
+  assert.match(merged?.description ?? "", /Milk[\s\S]*Merged from “Grocery shopping”:\nEggs/);
+  assert.equal(merged?.dueAt, "2026-10-06T00:00:00.000Z");
+  assert.equal((await repository.detail(sub))?.parentId, target);
+  assert.equal(await repository.detail(source), null);
+  const parent = await add("Parent");
+  const inner = await add("Inner", { parentId: parent });
+  assert.equal((await run({ op: "merge", id: parent, intoId: inner })).status, 400);
+  assert.notEqual(await repository.detail(inner), null);
+});

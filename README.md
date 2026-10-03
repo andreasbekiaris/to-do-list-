@@ -35,6 +35,22 @@ Internet access is required to load and save tasks. There is no service-worker c
 
 This phase uses the existing `todos` table and requires no additional migration. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
 
+## Assistant access (Jarvis)
+
+Your assistant can read and change tasks through `/api/agent/tasks`. It's off
+until `JARVIS_API_TOKEN` (a random string of 32+ characters) is set in Vercel;
+every request must send it as `Authorization: Bearer <token>`. Treat it like a
+password: anyone with it can change your tasks. Remove it in Vercel to switch
+the API off.
+
+- `GET /api/agent/tasks` lists every task (any depth).
+- `POST /api/agent/tasks` with one operation: `add` (title, description,
+  color, dueAt, allDay, parentId), `edit`, `complete` (done, includeSubtasks),
+  `delete` (removes the subtree), `move` (parentId, or null for top level), or
+  `merge` (id into intoId: subtasks move over, notes are combined, the
+  duplicate is deleted). Validation is the app's own; moves and merges into a
+  task's own subtree are refused.
+
 ## Create your account
 
 Follow [the Vercel setup guide](docs/DEPLOYMENT.md) to connect Neon, set `AUTH_SECRET` and `ACCOUNT_SETUP_KEY`, and apply the migrations. Open `/register`, choose your username/password, and enter the private setup code. Once your account exists, registration closes. Login then needs only your username and password on each device.
