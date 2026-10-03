@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. Work on only the current phase and STOP after each phase for review. Do not start Phase 2 without the user's go-ahead. Phase 1 requires real deployed login verification before it is complete; local tests do not prove that.
+Read `docs/PLAN.md` for the user's complete phase boundaries. Work on only the current phase and STOP after each phase for review. The user has confirmed production login and authorized Phase 2. Stop after Phase 2; AI and PWA are later phases. Keep local test results separate from production checks.
 
 ## Conventions
 

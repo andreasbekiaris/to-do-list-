@@ -2,7 +2,17 @@
 
 A private, single-user nested to-do app for desktop and phone. One Next.js app hosted on Vercel; installable PWA support comes in Phase 4.
 
-**Current scope: Phase 1.** A username/password login, one-time Create account flow, and protected workspace are implemented. GitHub OAuth has been removed at the user's request. Task editing, AI, and PWA support remain later phases.
+**Current scope: Phase 2.** Username/password accounts and a working nested task dashboard are implemented. AI writing and installable PWA support remain later phases.
+
+## Use your task dashboard
+
+- Choose **New task** to add a title, optional notes, and a deadline. Leave time blank for a calendar-only due date; timed deadlines use your device’s timezone.
+- Open a task to edit it or **Add subtask**. Subtasks can contain further subtasks; breadcrumbs take you back through the tree.
+- **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
+- Check a task to complete it. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
+- Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you navigate or refresh.
+
+This phase uses the existing `todos` table and requires no additional migration. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
 
 ## Create your account
 
@@ -41,7 +51,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Unit/integration tests cover password verification, setup-code validation, simultaneous registration, persistent rate limits, session authorization, and actual SQL migrations. Browser tests perform registration, wrong/correct password login, logout, and second-account rejection on desktop/mobile Chromium. Test-only infrastructure runs PGlite behind a dummy Neon HTTP endpoint; application authentication has no test bypass. These checks do not prove the live Neon/Vercel setup works.
+Unit/integration tests cover password verification, setup-code validation, simultaneous registration, persistent rate limits, session authorization, SQL migrations, nested task persistence, stale mutation confirmations, cascade deletion, and deadline filtering. Desktop/mobile browser tests cover authentication and task creation/editing, three-level nesting, persistence in a second device context, dates across timezones, completion rollback, deletion, and anonymous action rejection. Test-only infrastructure runs PGlite behind a dummy Neon HTTP endpoint; application authentication has no test bypass. Keep these checks separate from live Neon/Vercel verification.
 
 In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store`, and run browser tests with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium pnpm test:e2e`. Ports 3100, 3101, and 3199 must be available.
 

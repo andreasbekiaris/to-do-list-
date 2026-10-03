@@ -2,7 +2,7 @@
 
 Thread is a single-user nested to-do app used from a Mac, Windows PC, and phone. One Next.js app hosted on Vercel becomes the installable desktop/mobile app via PWA support. No native clients.
 
-Stop after each phase and summarize for review. Phase 1 implementation is the current scope. External setup and real production acceptance checks must be completed before calling Phase 1 fully verified.
+Stop after each phase and summarize for review. The owner reported successful production registration and login, and authorized Phase 2 task implementation. Phase 2 is the current scope; do not start AI writing or PWA work until the user requests it.
 
 ## Phase 1 — foundation
 

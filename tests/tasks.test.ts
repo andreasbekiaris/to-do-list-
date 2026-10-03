@@ -1,0 +1,72 @@
+import assert from "node:assert/strict";
+import { after, before, beforeEach, test } from "node:test";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { createTodoRepository } from "../src/db/todo-repository";
+import { dueStatus, matchesFilter, todoInputSchema, type Task } from "../src/lib/todo-validation";
+const client = new PGlite();
+const db = drizzle(client);
+const repository = createTodoRepository(query => db.execute(query));
+const input = { title: "A task", description: "Notes", dueAt: null, allDay: false };
+before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
+beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
+after(async () => { await client.close(); });
+async function tree() {
+  const root = (await repository.create({ ...input, title: "Root" }, null))!;
+  const child = (await repository.create({ ...input, title: "Child" }, root))!;
+  const leaf = (await repository.create({ ...input, title: "Leaf" }, child))!;
+  return { root, child, leaf };
+}
+test("nested tasks persist notes/dates, resolve ordered breadcrumbs, and report direct progress", async () => {
+  const { root, child, leaf } = await tree();
+  assert.deepEqual((await repository.breadcrumbs(leaf)).map(item => item.title), ["Root", "Child", "Leaf"]);
+  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
+  assert.equal((await repository.detail(leaf))?.description, "Ελληνικές σημειώσεις");
+  assert.equal((await repository.detail(leaf))?.dueAt, "2026-12-24T00:00:00.000Z");
+  await repository.complete(child, true, "only", []);
+  assert.equal((await repository.detail(root))?.childCount, 1);
+  assert.equal((await repository.detail(root))?.completedChildren, 1);
+  assert.equal((await repository.detail(leaf))?.isDone, false);
+});
+test("completion asks for all unfinished descendants and rejects stale confirmations atomically", async () => {
+  const { root, child, leaf } = await tree();
+  const asked = await repository.complete(root, true, "ask", []);
+  assert.equal(asked.changed, false);
+  assert.deepEqual(new Set(asked.ids), new Set([child, leaf]));
+  const newChild = (await repository.create(input, root))!;
+  const stale = await repository.complete(root, true, "tree", asked.ids);
+  assert.equal(stale.changed, false);
+  assert.equal((await repository.list()).some(task => task.isDone), false);
+  assert.deepEqual(new Set(stale.ids), new Set([child, leaf, newChild]));
+  assert.equal((await repository.complete(root, true, "tree", stale.ids)).changed, true);
+  assert.equal((await repository.list()).every(task => task.isDone), true);
+  await repository.complete(root, false, "ask", []);
+  assert.equal((await repository.detail(root))?.isDone, false);
+  const result = await client.query<{ completed_at: Date | null }>('SELECT completed_at FROM todos WHERE id=$1', [root]);
+  assert.equal(result.rows[0].completed_at, null);
+});
+test("delete requires the complete descendant set, cascades, and preserves other roots", async () => {
+  const { root, child, leaf } = await tree();
+  const other = (await repository.create(input, null))!;
+  const result = await repository.remove(root, []);
+  assert.equal(result.changed, false);
+  assert.deepEqual(new Set(result.ids), new Set([child, leaf]));
+  assert.equal((await repository.remove(root, [child])).changed, false);
+  assert.equal((await repository.remove(root, result.ids)).changed, true);
+  assert.deepEqual((await repository.list()).map(task => task.id), [other]);
+  assert.equal(await repository.create(input, root), undefined);
+});
+test("date-only deadlines stay on the calendar date; timed deadlines and done filters differ", () => {
+  const now = new Date(2026, 9, 3, 12);
+  const task: Task = { ...input, id: "unused", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2026-10-03T00:00:00.000Z" };
+  assert.equal(dueStatus(task, now), "today");
+  assert.equal(dueStatus({ ...task, dueAt: "2026-10-02T00:00:00.000Z" }, now), "overdue");
+  assert.equal(dueStatus({ ...task, dueAt: "2026-10-04T00:00:00.000Z" }, now), "upcoming");
+  assert.equal(dueStatus({ ...task, allDay: false, dueAt: new Date(now.getTime()-1000).toISOString() }, now), "overdue");
+  assert.equal(matchesFilter({ ...task, allDay: false, dueAt: new Date(now.getTime()-1000).toISOString() }, "Today", now), true);
+  assert.equal(matchesFilter({ ...task, isDone: true }, "Overdue", now), false);
+  assert.equal(matchesFilter({ ...task, isDone: true }, "Done", now), true);
+  assert.equal(todoInputSchema.safeParse({ ...input, title: "   " }).success, false);
+  assert.equal(todoInputSchema.safeParse({ ...input, allDay: true }).success, false);
+});

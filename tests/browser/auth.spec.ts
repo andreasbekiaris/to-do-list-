@@ -58,7 +58,7 @@ test("username/password login rejects wrong passwords and supports logout", asyn
   await page.getByLabel("Username", { exact: true }).fill(username.toUpperCase());
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Room for your next chapter." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A little plan. A clearer day." })).toBeVisible();
   await expect(page.getByText("Welcome back, my.owner.")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const session = await (await page.request.get("/api/auth/session")).json();
