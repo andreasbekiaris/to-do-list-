@@ -44,8 +44,11 @@ function Editor({ task, parentId, onClose }: { task?: Task; parentId: string | n
     </form>
   </TaskDialog>;
 }
-export function TaskEditor({ task, parentId = null }: { task?: Task; parentId?: string | null }) {
+export function TaskEditor({ task, parentId = null, compact = false }: { task?: Task; parentId?: string | null; compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  return <><Button variant={task ? "outline" : "default"} onClick={() => setOpen(true)}>{task ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}{task ? "Edit task" : parentId ? "Add subtask" : "New task"}</Button>
+  const label = task ? `Edit ${task.title}` : parentId ? "Add subtask" : "New task";
+  return <>{compact && task
+    ? <button type="button" aria-label={label} title="Quick edit" onClick={() => setOpen(true)} className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Pencil className="size-4" aria-hidden="true" /></button>
+    : <Button variant={task ? "outline" : "default"} onClick={() => setOpen(true)}>{task ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}{task ? "Edit task" : parentId ? "Add subtask" : "New task"}</Button>}
     {open && <Editor task={task} parentId={parentId} onClose={() => setOpen(false)} />}</>;
 }

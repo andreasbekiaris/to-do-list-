@@ -6,7 +6,7 @@ Username/password accounts, nested tasks, and desktop installation are implement
 
 ## Colors and themes
 
-Every task can use one of six saved colors: Sage, Sky, Lavender, Rose, Amber, or Slate. Choose the color while creating a task, or use **Edit task** to change it later. Task colors are stored in Neon and therefore follow the task across desktop and mobile devices.
+Every task can use one of six saved colors: Sage, Sky, Lavender, Rose, Amber, or Slate. Choose the color while creating a task, use the small pencil on any task card for quick editing, or use **Edit task** on its full page. Task colors are stored in Neon and therefore follow the task across desktop and mobile devices.
 
 Use **Theme** in the signed-in header to choose Sage, Lavender, Sunset, or Midnight for the whole interface. The theme is remembered locally on that browser/device, so each device can have its own look. Changing the app theme does not change individual task colors.
 
