@@ -21,6 +21,7 @@ export const todos = pgTable(
     }),
     title: varchar("title", { length: 500 }).notNull(),
     description: text("description").notNull().default(""),
+    color: varchar("color", { length: 16 }).notNull().default("sage"),
     isDone: boolean("is_done").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
@@ -35,6 +36,7 @@ export const todos = pgTable(
   (table) => [
     index("todos_parent_id_idx").on(table.parentId),
     check("todos_title_not_blank", sql`length(trim(${table.title})) > 0`),
+    check("todos_color_valid", sql`${table.color} IN ('sage', 'sky', 'lavender', 'rose', 'amber', 'slate')`),
     check("todos_not_own_parent", sql`${table.parentId} IS DISTINCT FROM ${table.id}`),
     check(
       "todos_completion_consistent",

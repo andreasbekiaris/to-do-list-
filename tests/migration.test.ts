@@ -18,6 +18,7 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
   const [leaf] = await db.insert(todos).values({ title: "GET vessels", parentId: child.id, dueAt: new Date("2026-10-05T12:30:00+03:00") }).returning();
   assert.equal(parent.parentId, null);
   assert.equal(parent.isDone, false);
+  assert.equal(parent.color, "sage");
   assert.equal(parent.completedAt, null);
   assert.equal(leaf.dueAt?.toISOString(), "2026-10-05T09:30:00.000Z");
 
@@ -35,6 +36,7 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
   await assert.rejects(db.update(todos).set({ parentId: parent.id }).where(eq(todos.id, parent.id)));
   await assert.rejects(db.update(todos).set({ isDone: true }).where(eq(todos.id, leaf.id)));
   await assert.rejects(db.insert(todos).values({ title: "No date", allDay: true }));
+  await assert.rejects(client.query("INSERT INTO todos (title, color) VALUES ('Bad color', 'neon')"));
 
   await db.update(todos).set({ isDone: true, completedAt: new Date() }).where(eq(todos.id, leaf.id));
   const [done] = await db.select().from(todos).where(eq(todos.id, leaf.id));

@@ -1,0 +1,2 @@
+ALTER TABLE "todos" ADD COLUMN "color" varchar(16) DEFAULT 'sage' NOT NULL;--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_color_valid" CHECK ("todos"."color" IN ('sage', 'sky', 'lavender', 'rose', 'amber', 'slate'));

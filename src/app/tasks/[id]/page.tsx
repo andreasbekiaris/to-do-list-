@@ -8,6 +8,7 @@ import { Workspace } from "@/components/workspace";
 import { TaskEditor } from "@/components/tasks/task-editor";
 import { CompleteTask, DeleteTask } from "@/components/tasks/task-controls";
 import { DueBadge, TaskList } from "@/components/tasks/task-list";
+import { taskColorClasses } from "@/lib/todo-validation";
 export const dynamic = "force-dynamic";
 
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +21,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const children = tasks.filter(child => child.parentId === id);
   return <Workspace>
     <nav aria-label="Breadcrumb" className="mb-8"><ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"><li><Link className="inline-flex min-h-11 items-center hover:text-primary" href="/">All tasks</Link></li>{breadcrumbs.map((item, index) => <li key={item.id} className="flex min-w-0 max-w-full items-center gap-2"><ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />{index === breadcrumbs.length-1 ? <span aria-current="page" className="truncate">{item.title}</span> : <Link className="inline-flex min-h-11 min-w-0 items-center hover:text-primary" href={`/tasks/${item.id}`}><span className="truncate">{item.title}</span></Link>}</li>)}</ol></nav>
-    <section className="rounded-2xl border border-border bg-card p-5 sm:p-8"><div className="flex items-start gap-3"><CompleteTask task={task} /><h1 className={`min-w-0 pt-1 font-display text-3xl leading-tight [overflow-wrap:anywhere] sm:text-4xl ${task.isDone ? "text-muted-foreground line-through" : ""}`}>{task.title}</h1></div>
+    <section data-task-color={task.color} className={`rounded-2xl border border-border p-5 sm:p-8 ${taskColorClasses[task.color]}`}><div className="flex items-start gap-3"><CompleteTask task={task} /><h1 className={`min-w-0 pt-1 font-display text-3xl leading-tight [overflow-wrap:anywhere] sm:text-4xl ${task.isDone ? "text-muted-foreground line-through" : ""}`}>{task.title}</h1></div>
       <div className="mt-5"><DueBadge task={task} /></div>
       <p className={`mt-5 whitespace-pre-wrap break-words text-sm leading-7 [overflow-wrap:anywhere] ${task.description ? "" : "text-muted-foreground"}`}>{task.description || "No notes yet. Add a little context with Edit task."}</p>
       <div className="mt-7 flex flex-wrap justify-between gap-3 border-t border-border pt-5"><TaskEditor task={task} parentId={task.parentId} /><DeleteTask task={task} /></div>

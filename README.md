@@ -4,6 +4,12 @@ A private, single-user nested to-do app for desktop and phone. One Next.js app h
 
 Username/password accounts, nested tasks, and desktop installation are implemented. At the user's request, installation was brought forward ahead of AI writing, which remains deferred.
 
+## Colors and themes
+
+Every task can use one of six saved colors: Sage, Sky, Lavender, Rose, Amber, or Slate. Choose the color while creating a task, or use **Edit task** to change it later. Task colors are stored in Neon and therefore follow the task across desktop and mobile devices.
+
+Use **Theme** in the signed-in header to choose Sage, Lavender, Sunset, or Midnight for the whole interface. The theme is remembered locally on that browser/device, so each device can have its own look. Changing the app theme does not change individual task colors.
+
 ## Install on your desktop
 
 Open https://to-do-list-ten-pi-88.vercel.app in your regular browser and sign in. Use **Install app** in Thread's header for the native installation prompt when available, or follow these browser steps:
@@ -74,6 +80,6 @@ In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspac
 
 Edit `src/db/schema.ts`, then run `pnpm db:generate --name=describe_change`. Review and commit the new SQL and metadata. Apply explicitly with `pnpm db:migrate`, then verify with `pnpm db:check`. Never mutate the database during builds or requests, and do not change previously applied migrations.
 
-The owner and authentication-limit tables are in `0001_owner_password_auth.sql`; existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
+The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds the validated task color column and defaults existing tasks to Sage. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
 
 See [the product plan](docs/PLAN.md), [deployment steps](docs/DEPLOYMENT.md), and [agent conventions](CLAUDE.md). Stop after each phase for review.

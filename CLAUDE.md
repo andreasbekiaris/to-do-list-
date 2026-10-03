@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and requested desktop installation after Phase 2. Phase 4 installation and refresh-on-return are authorized ahead of Phase 3; AI remains deferred. Stop after the desktop installation work. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login, requested desktop installation after Phase 2, and then authorized task colors and device-local theme selection. Phase 4 installation/refresh and the appearance customization are authorized ahead of Phase 3; AI remains deferred. Stop after the requested appearance work. Keep local test results separate from production checks.
 
 ## Conventions
 
@@ -20,6 +20,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - `DATABASE_URL` comes from Vercel's Neon integration. `DATABASE_URL_UNPOOLED` is optional for CLI migrations. Do not run migrations during builds or page requests.
 - Change `src/db/schema.ts`, generate and review a new Drizzle migration, and commit the SQL and metadata. Never edit an already applied migration or use `db:push` in production.
 - Todo title: nonblank, max 500 chars. Update `isDone` and `completedAt` together. `updatedAt` is set by Drizzle's `$onUpdate`; raw SQL mutations must update it explicitly.
+- Task color is one of `sage`, `sky`, `lavender`, `rose`, `amber`, or `slate` and persists in Postgres. The app theme is intentionally device-local in `localStorage` and must not contain private task data.
 - A todo may have arbitrarily nested children. The FK cascades deletion. Direct self-parenting is blocked by a check; future reparenting must also reject longer cycles. No reparenting UI is currently implemented.
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
 - No native apps, sharing, push notifications, offline writes, websockets, or realtime services.

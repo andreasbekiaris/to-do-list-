@@ -138,3 +138,28 @@ test("installation help is accessible and returning to the app refreshes saved t
   await expect(page.getByRole("link", { name: "Added on another device", exact: true })).toBeVisible();
   await other.close();
 });
+
+test("task colors persist and themes can be changed on this device", async ({ page }) => {
+  await page.getByRole("button", { name: "New task", exact: true }).first().click();
+  const editor = page.getByRole("dialog", { name: "A new little plan" });
+  await editor.getByLabel("Title", { exact: true }).fill("Colorful plan");
+  await editor.getByText("Rose", { exact: true }).click();
+  await editor.getByRole("button", { name: "Add task", exact: true }).click();
+  const card = page.locator('article[data-task-color="rose"]');
+  await expect(card.getByRole("link", { name: "Colorful plan", exact: true })).toBeVisible();
+  await card.getByRole("link", { name: "Colorful plan", exact: true }).click();
+  await expect(page.locator('section[data-task-color="rose"]')).toBeVisible();
+  await page.getByRole("button", { name: "Edit task", exact: true }).click();
+  await page.getByText("Sky", { exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.locator('section[data-task-color="sky"]')).toBeVisible();
+
+  await page.getByRole("button", { name: "Choose theme", exact: true }).click();
+  await page.getByRole("button", { name: /Midnight/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+  await expect(page.locator('section[data-task-color="sky"]')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

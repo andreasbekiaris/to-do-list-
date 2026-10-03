@@ -21,6 +21,36 @@
   --radius: 0.75rem;
 }
 
+:root[data-theme="lavender"] {
+  --background: #f8f6fb; --foreground: #332c43; --card: #ffffff; --card-foreground: #332c43;
+  --primary: #66528f; --primary-foreground: #ffffff; --secondary: #f0ecf7; --secondary-foreground: #4e3e70;
+  --muted: #f0ecf7; --muted-foreground: #716981; --accent: #ece7f5; --accent-foreground: #59457e;
+  --border: #e1dbea; --input: #ded7e9; --ring: #8c78b5;
+}
+
+:root[data-theme="sunset"] {
+  --background: #fff8f1; --foreground: #4b2d24; --card: #fffdf9; --card-foreground: #4b2d24;
+  --primary: #9a4f38; --primary-foreground: #ffffff; --secondary: #f8eadf; --secondary-foreground: #75412f;
+  --muted: #f8eadf; --muted-foreground: #806c63; --accent: #f5e5d6; --accent-foreground: #87452f;
+  --border: #ecd9ca; --input: #e8d2c1; --ring: #bf7961;
+}
+
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+  --background: #101a24; --foreground: #e8f1ed; --card: #17232e; --card-foreground: #e8f1ed;
+  --primary: #7fc7aa; --primary-foreground: #10241c; --secondary: #22313e; --secondary-foreground: #d8e7e1;
+  --muted: #22313e; --muted-foreground: #a6b7b1; --accent: #1c352f; --accent-foreground: #a7dcc6;
+  --destructive: #f48b8b; --border: #31424f; --input: #3a4b58; --ring: #7fc7aa;
+}
+
+:root[data-theme="midnight"] [data-task-color] { background-color: #17232e !important; }
+:root[data-theme="midnight"] [data-task-color="sage"] { border-top-color: #34d399 !important; }
+:root[data-theme="midnight"] [data-task-color="sky"] { border-top-color: #38bdf8 !important; }
+:root[data-theme="midnight"] [data-task-color="lavender"] { border-top-color: #a78bfa !important; }
+:root[data-theme="midnight"] [data-task-color="rose"] { border-top-color: #fb7185 !important; }
+:root[data-theme="midnight"] [data-task-color="amber"] { border-top-color: #fbbf24 !important; }
+:root[data-theme="midnight"] [data-task-color="slate"] { border-top-color: #94a3b8 !important; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

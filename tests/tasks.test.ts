@@ -8,7 +8,7 @@ import { dueStatus, matchesFilter, todoInputSchema, type Task } from "../src/lib
 const client = new PGlite();
 const db = drizzle(client);
 const repository = createTodoRepository(query => db.execute(query));
-const input = { title: "A task", description: "Notes", dueAt: null, allDay: false };
+const input = { title: "A task", description: "Notes", color: "sage" as const, dueAt: null, allDay: false };
 before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
 beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
 after(async () => { await client.close(); });
@@ -21,8 +21,9 @@ async function tree() {
 test("nested tasks persist notes/dates, resolve ordered breadcrumbs, and report direct progress", async () => {
   const { root, child, leaf } = await tree();
   assert.deepEqual((await repository.breadcrumbs(leaf)).map(item => item.title), ["Root", "Child", "Leaf"]);
-  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
+  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", color: "lavender", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
   assert.equal((await repository.detail(leaf))?.description, "Ελληνικές σημειώσεις");
+  assert.equal((await repository.detail(leaf))?.color, "lavender");
   assert.equal((await repository.detail(leaf))?.dueAt, "2026-12-24T00:00:00.000Z");
   await repository.complete(child, true, "only", []);
   assert.equal((await repository.detail(root))?.childCount, 1);

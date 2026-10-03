@@ -15,7 +15,8 @@ export const viewport: Viewport = { themeColor: "#2e5947" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-theme="sage" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('thread-theme');if(['sage','lavender','sunset','midnight'].includes(t))document.documentElement.dataset.theme=t}catch(e){}` }} /></head>
       <body className="min-h-full">
         <a href="#main-content" className="sr-only z-50 rounded-lg bg-primary p-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
         {children}

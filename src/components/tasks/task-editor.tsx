@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { Plus, Pencil } from "lucide-react";
 import { saveTask } from "@/app/tasks/actions";
-import type { Task } from "@/lib/todo-validation";
+import { taskColors, taskColorNames, taskColorSwatches, type Task, type TaskColor } from "@/lib/todo-validation";
 import { Button } from "@/components/ui/button";
 import { TaskDialog } from "./dialog";
 
@@ -18,6 +18,7 @@ function Editor({ task, parentId, onClose }: { task?: Task; parentId: string | n
   const initial = localDateTime(task);
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
+  const [color, setColor] = useState<TaskColor>(task?.color ?? "sage");
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [error, setError] = useState("");
@@ -26,12 +27,13 @@ function Editor({ task, parentId, onClose }: { task?: Task; parentId: string | n
     <form onSubmit={event => { event.preventDefault(); setError(""); startTransition(async () => {
       try {
         const dueAt = date ? new Date(time ? `${date}T${time}` : `${date}T00:00:00.000Z`).toISOString() : null;
-        const result = await saveTask({ title, description, dueAt, allDay: !!date && !time }, task?.id ?? null, parentId);
+        const result = await saveTask({ title, description, color, dueAt, allDay: !!date && !time }, task?.id ?? null, parentId);
         if (result.ok) onClose(); else setError(result.error);
       } catch { setError("Couldn't save. Check your connection and try again."); }
     }); }} className="space-y-5">
       <label className="block text-sm font-medium">Title<input autoFocus required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} disabled={pending} className={inputClass} placeholder="What would you like to do?" /></label>
       <label className="block text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span><textarea maxLength={20000} value={description} onChange={e => setDescription(e.target.value)} disabled={pending} className={`${inputClass} min-h-28 resize-y`} placeholder="Add a little context, a link, or your next step…" /></label>
+      <fieldset disabled={pending}><legend className="mb-3 text-sm font-medium">Task color</legend><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{taskColors.map(item => <label key={item} className={`flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border px-2 text-xs transition-all ${color === item ? "border-primary ring-2 ring-ring ring-offset-2 ring-offset-card" : "border-border hover:bg-muted"}`}><input className="sr-only" type="radio" name="taskColor" value={item} checked={color === item} onChange={() => setColor(item)} /><span className={`size-5 rounded-full ${taskColorSwatches[item]}`} aria-hidden="true" /><span>{taskColorNames[item]}</span></label>)}</div></fieldset>
       <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2">
         <label className="block min-w-0 text-sm font-medium">Due date<input type="date" min="1900-01-01" max="9999-12-31" value={date} onChange={e => {setDate(e.target.value); if (!e.target.value) setTime("");}} disabled={pending} className={inputClass} /></label>
         <label className="block min-w-0 text-sm font-medium">Time <span className="font-normal text-muted-foreground">(optional)</span><input type="time" value={time} onChange={e => setTime(e.target.value)} disabled={!date || pending} className={inputClass} /></label>
