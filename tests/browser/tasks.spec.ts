@@ -163,3 +163,32 @@ test("task colors persist and themes can be changed on this device", async ({ pa
   await expect(page.locator('section[data-task-color="sky"]')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("day, week and month views organize dated tasks and keep undated tasks in All tasks", async ({ page }) => {
+  await add(page, "Midweek appointment", false, "2027-05-12");
+  await add(page, "Thursday deadline", false, "2027-05-13");
+  await add(page, "Someday idea");
+
+  await page.getByRole("button", { name: "Day", exact: true }).click();
+  await page.getByLabel("Selected date").fill("2027-05-12");
+  await expect(page.getByRole("link", { name: "Midweek appointment", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Thursday deadline", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Someday idea", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Thursday deadline", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "New task", exact: true }).first().click();
+  await expect(page.getByRole("dialog").getByLabel("Due date")).toHaveValue("2027-05-13");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Midweek appointment", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Thursday deadline", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Midweek appointment", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Thursday deadline", exact: true })).toBeVisible();
+  await expect(page.getByText(/1 task has no deadline/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await page.getByRole("button", { name: "All tasks", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Someday idea", exact: true })).toBeVisible();
+});

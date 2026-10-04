@@ -14,12 +14,12 @@ function localDateTime(task?: Task) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return { date: `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, time: `${pad(date.getHours())}:${pad(date.getMinutes())}` };
 }
-function Editor({ task, parentId, onClose }: { task?: Task; parentId: string | null; onClose: () => void }) {
+function Editor({ task, parentId, defaultDate, onClose }: { task?: Task; parentId: string | null; defaultDate?: string; onClose: () => void }) {
   const initial = localDateTime(task);
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [color, setColor] = useState<TaskColor>(task?.color ?? "sage");
-  const [date, setDate] = useState(initial.date);
+  const [date, setDate] = useState(initial.date || defaultDate || "");
   const [time, setTime] = useState(initial.time);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -44,11 +44,11 @@ function Editor({ task, parentId, onClose }: { task?: Task; parentId: string | n
     </form>
   </TaskDialog>;
 }
-export function TaskEditor({ task, parentId = null, compact = false }: { task?: Task; parentId?: string | null; compact?: boolean }) {
+export function TaskEditor({ task, parentId = null, compact = false, defaultDate }: { task?: Task; parentId?: string | null; compact?: boolean; defaultDate?: string }) {
   const [open, setOpen] = useState(false);
   const label = task ? `Edit ${task.title}` : parentId ? "Add subtask" : "New task";
   return <>{compact && task
     ? <button type="button" aria-label={label} title="Quick edit" onClick={() => setOpen(true)} className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Pencil className="size-4" aria-hidden="true" /></button>
     : <Button variant={task ? "outline" : "default"} onClick={() => setOpen(true)}>{task ? <Pencil aria-hidden="true" /> : <Plus aria-hidden="true" />}{task ? "Edit task" : parentId ? "Add subtask" : "New task"}</Button>}
-    {open && <Editor task={task} parentId={parentId} onClose={() => setOpen(false)} />}</>;
+    {open && <Editor task={task} parentId={parentId} defaultDate={defaultDate} onClose={() => setOpen(false)} />}</>;
 }

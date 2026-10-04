@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login, requested desktop installation after Phase 2, and then authorized task colors and device-local theme selection. Phase 4 installation/refresh and the appearance customization are authorized ahead of Phase 3; AI remains deferred. Stop after the requested appearance work. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, and calendar organization (All tasks / Day / Week / Month). These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested calendar work. Keep local test results separate from production checks.
 
 ## Conventions
 
@@ -23,6 +23,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - Task color is one of `sage`, `sky`, `lavender`, `rose`, `amber`, or `slate` and persists in Postgres. The app theme is intentionally device-local in `localStorage` and must not contain private task data.
 - A todo may have arbitrarily nested children. The FK cascades deletion. Direct self-parenting is blocked by a check; future reparenting must also reject longer cycles. No reparenting UI is currently implemented.
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
+- Calendar weeks begin Monday. Calendar views include dated tasks at every nesting level; undated tasks remain available in All tasks. Timed tasks are grouped by the device's local calendar day, while all-day tasks use their stored UTC date components.
 - No native apps, sharing, push notifications, offline writes, websockets, or realtime services.
 - Anthropic is Phase 3 only: Vercel AI SDK, `claude-haiku-4-5-20251001`, Zod output, max 500 input chars, explicit preview/accept, preserve Greek/English. `ANTHROPIC_API_KEY` belongs only in Vercel environment settings.
 

@@ -7,5 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const user = await requireUser();
   const tasks = await (await taskRepository()).list();
-  return <Workspace><Dashboard tasks={tasks} name={user.name || "there"} /></Workspace>;
+  const initialDate = new Date().toISOString().slice(0, 10);
+  return <Workspace><Dashboard tasks={tasks} name={user.name || "there"} initialDate={initialDate} /></Workspace>;
 }

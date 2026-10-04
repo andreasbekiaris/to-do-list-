@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { createTodoRepository } from "../src/db/todo-repository";
 import { dueStatus, matchesFilter, todoInputSchema, type Task } from "../src/lib/todo-validation";
+import { addDays, groupTasksByDate, monthKeys, moveMonth, startOfWeek, taskDateKey, weekKeys } from "../src/lib/calendar";
 const client = new PGlite();
 const db = drizzle(client);
 const repository = createTodoRepository(query => db.execute(query));
@@ -70,4 +71,16 @@ test("date-only deadlines stay on the calendar date; timed deadlines and done fi
   assert.equal(matchesFilter({ ...task, isDone: true }, "Done", now), true);
   assert.equal(todoInputSchema.safeParse({ ...input, title: "   " }).success, false);
   assert.equal(todoInputSchema.safeParse({ ...input, allDay: true }).success, false);
+});
+test("calendar helpers group deadlines into Monday weeks and complete month grids", () => {
+  const dated: Task = { ...input, id: "dated", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2027-05-12T00:00:00.000Z" };
+  const undated: Task = { ...dated, id: "undated", dueAt: null };
+  assert.equal(taskDateKey(dated), "2027-05-12");
+  assert.equal(taskDateKey(undated), null);
+  assert.equal(startOfWeek("2027-05-12"), "2027-05-10");
+  assert.deepEqual(weekKeys("2027-05-12"), ["2027-05-10", "2027-05-11", "2027-05-12", "2027-05-13", "2027-05-14", "2027-05-15", "2027-05-16"]);
+  assert.equal(addDays("2027-03-28", 1), "2027-03-29");
+  assert.equal(moveMonth("2027-01-31", 1), "2027-02-01");
+  assert.equal(monthKeys("2027-05-12").length, 42);
+  assert.deepEqual(groupTasksByDate([dated, undated]).get("2027-05-12")?.map(task => task.id), ["dated"]);
 });
