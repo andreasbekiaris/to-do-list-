@@ -27,6 +27,6 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       <div className="mt-7 flex flex-wrap justify-between gap-3 border-t border-border pt-5"><TaskEditor task={task} parentId={task.parentId} /><DeleteTask task={task} /></div>
     </section>
     <div className="mb-5 mt-10 flex flex-wrap items-center justify-between gap-4"><div><h2 className="flex items-center gap-2 text-xl font-medium"><Layers3 className="size-5 text-primary" />Smaller steps</h2><p className="mt-2 text-sm text-muted-foreground">{task.completedChildren} of {task.childCount} subtasks complete</p></div><TaskEditor parentId={task.id} /></div>
-    {children.length ? <TaskList tasks={children} /> : <div className="rounded-2xl border border-dashed border-border px-5 py-10 text-center text-sm leading-6 text-muted-foreground">Break this task into manageable steps.<br />Each subtask can have its own notes, deadline, and subtasks.</div>}
+    {children.length ? <TaskList tasks={children} allTasks={tasks} outParentId={task.parentId} outLabel={task.parentId ? `Drop here to move a task out of “${task.title}” and one level up` : `Drop here to move a task out of “${task.title}” to the top level`} /> : <div className="rounded-2xl border border-dashed border-border px-5 py-10 text-center text-sm leading-6 text-muted-foreground">Break this task into manageable steps.<br />Each subtask can have its own notes, deadline, and subtasks.</div>}
   </Workspace>;
 }

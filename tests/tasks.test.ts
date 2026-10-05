@@ -59,6 +59,17 @@ test("delete requires the complete descendant set, cascades, and preserves other
   assert.deepEqual((await repository.list()).map(task => task.id), [other]);
   assert.equal(await repository.create(input, root), undefined);
 });
+test("tasks can move under another task or back out without creating cycles", async () => {
+  const { root, child, leaf } = await tree();
+  const other = (await repository.create({ ...input, title: "Other" }, null))!;
+  assert.equal(await repository.move(other, root), true);
+  assert.equal((await repository.detail(other))?.parentId, root);
+  assert.equal(await repository.move(other, null), true);
+  assert.equal((await repository.detail(other))?.parentId, null);
+  assert.equal(await repository.move(root, leaf), false);
+  assert.equal(await repository.move(child, child), false);
+  assert.equal((await repository.detail(root))?.parentId, null);
+});
 test("date-only deadlines stay on the calendar date; timed deadlines and done filters differ", () => {
   const now = new Date(2026, 9, 3, 12);
   const task: Task = { ...input, id: "unused", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2026-10-03T00:00:00.000Z" };

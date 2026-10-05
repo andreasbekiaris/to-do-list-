@@ -32,6 +32,7 @@ Internet access is required to load and save tasks. There is no service-worker c
 - **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
 - Use **All tasks**, **Day**, **Week**, and **Month** above the dashboard to switch between the full list and calendar organization. Calendar views include dated tasks from every nesting level. Move backward or forward, jump to Today, or choose a date directly. Tasks without deadlines stay in All tasks.
 - Selecting a day number in Week or Month opens that day. Creating a task while a calendar view is active preselects the current calendar date.
+- In All tasks or a task's Smaller steps list, drag one task card onto another to make it a subtask. Use the dashed drop area to move it back out (one level up), or use the card's move handle to choose a parent on touch screens and with a keyboard.
 - Check a task to complete it. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
 - Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you return to the app, navigate, or refresh.
 

@@ -43,3 +43,14 @@ export async function deleteTask(id: string, expectedIds: string[] = []): Promis
     refreshTasks(); return { ok: true };
   } catch { return { ok: false, error: "Couldn't delete this task. Please try again." }; }
 }
+export async function moveTask(id: string, parentId: string | null): Promise<TaskResult> {
+  await requireUser();
+  const parsed = z.object({ id: z.uuid(), parentId: z.uuid().nullable() }).safeParse({ id, parentId });
+  if (!parsed.success || id === parentId) return { ok: false, error: "Choose a different parent task." };
+  try {
+    const moved = await (await taskRepository()).move(id, parentId);
+    if (!moved) return { ok: false, error: "That move isn't possible. A task can't be placed inside one of its own subtasks." };
+    refreshTasks();
+    return { ok: true };
+  } catch { return { ok: false, error: "Couldn't move this task. Please try again." }; }
+}

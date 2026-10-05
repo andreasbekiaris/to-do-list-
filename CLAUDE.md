@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, and calendar organization (All tasks / Day / Week / Month). These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested calendar work. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, calendar organization, and drag-and-drop task reparenting. These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested task-moving work. Keep local test results separate from production checks.
 
 ## Conventions
 
@@ -21,7 +21,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - Change `src/db/schema.ts`, generate and review a new Drizzle migration, and commit the SQL and metadata. Never edit an already applied migration or use `db:push` in production.
 - Todo title: nonblank, max 500 chars. Update `isDone` and `completedAt` together. `updatedAt` is set by Drizzle's `$onUpdate`; raw SQL mutations must update it explicitly.
 - Task color is one of `sage`, `sky`, `lavender`, `rose`, `amber`, or `slate` and persists in Postgres. The app theme is intentionally device-local in `localStorage` and must not contain private task data.
-- A todo may have arbitrarily nested children. The FK cascades deletion. Direct self-parenting is blocked by a check; future reparenting must also reject longer cycles. No reparenting UI is currently implemented.
+- A todo may have arbitrarily nested children. The FK cascades deletion. Reparenting must reject both self-parenting and longer cycles. Task-list cards support drag-and-drop reparenting plus an accessible Move dialog; moving out on a detail page goes one level up.
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
 - Calendar weeks begin Monday. Calendar views include dated tasks at every nesting level; undated tasks remain available in All tasks. Timed tasks are grouped by the device's local calendar day, while all-day tasks use their stored UTC date components.
 - No native apps, sharing, push notifications, offline writes, websockets, or realtime services.

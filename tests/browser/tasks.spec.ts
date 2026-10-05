@@ -192,3 +192,28 @@ test("day, week and month views organize dated tasks and keep undated tasks in A
   await page.getByRole("button", { name: "All tasks", exact: true }).click();
   await expect(page.getByRole("link", { name: "Someday idea", exact: true })).toBeVisible();
 });
+
+test("tasks can be dragged inside another task and moved back out", async ({ page }, testInfo) => {
+  await add(page, "House project");
+  await add(page, "Loose errand");
+  const house = page.locator('article[data-task-id]').filter({ has: page.getByRole("link", { name: "House project", exact: true }) });
+  const errand = page.locator('article[data-task-id]').filter({ has: page.getByRole("link", { name: "Loose errand", exact: true }) });
+  await errand.dragTo(house);
+  await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "House project", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toBeVisible();
+  await page.screenshot({ path: `/tmp/thread-task-moving-${testInfo.project.name}.png`, fullPage: true });
+  await page.locator('article[data-task-id]').filter({ has: page.getByRole("link", { name: "Loose errand", exact: true }) }).dragTo(page.locator('[data-drop-zone="out"]'));
+  await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "All tasks", exact: true }).click();
+  await page.getByRole("button", { name: "Move Loose errand", exact: true }).click();
+  await page.getByLabel("New parent", { exact: true }).selectOption({ label: "House project" });
+  await page.getByRole("button", { name: "Move task", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "House project", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
