@@ -234,3 +234,32 @@ test("long task titles wrap without overlapping move and edit controls", async (
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `/tmp/thread-long-title-${testInfo.project.name}.png`, fullPage: true });
 });
+
+test("a task can span a date window and appears on every calendar day in it", async ({ page }, testInfo) => {
+  await page.getByRole("button", { name: "New task", exact: true }).first().click();
+  const editor = page.getByRole("dialog", { name: "A new little plan" });
+  await editor.getByLabel("Title", { exact: true }).fill("October conference");
+  await editor.getByLabel(/Start date/).fill("2027-10-05");
+  await editor.getByLabel("Due date", { exact: true }).fill("2027-10-10");
+  await editor.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  const card = page.locator('article[data-task-id]').filter({ has: page.getByRole("link", { name: "October conference", exact: true }) });
+  await expect(card).toContainText(/Oct 5, 2027.*Oct 10, 2027/);
+  await card.getByRole("button", { name: "Edit October conference", exact: true }).click();
+  await expect(page.getByRole("dialog").getByLabel(/Start date/)).toHaveValue("2027-10-05");
+  await expect(page.getByRole("dialog").getByLabel("Due date", { exact: true })).toHaveValue("2027-10-10");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await page.getByRole("button", { name: "Day", exact: true }).click();
+  await page.getByLabel("Selected date").fill("2027-10-07");
+  await expect(page.getByRole("link", { name: "October conference", exact: true })).toBeVisible();
+  await page.getByLabel("Selected date").fill("2027-10-11");
+  await expect(page.getByRole("link", { name: "October conference", exact: true })).toHaveCount(0);
+  await page.getByLabel("Selected date").fill("2027-10-07");
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  await expect(page.getByRole("link", { name: "October conference", exact: true })).toHaveCount(6);
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.getByRole("link", { name: "October conference", exact: true })).toHaveCount(6);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `/tmp/thread-date-window-${testInfo.project.name}.png`, fullPage: true });
+});

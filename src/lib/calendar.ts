@@ -1,11 +1,9 @@
-import type { Task } from "@/lib/todo-validation";
+import { localDateKey, taskEndDateKey, taskOccursOnDate, type Task } from "@/lib/todo-validation";
 
 export type CalendarView = "list" | "day" | "week" | "month";
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
 export function dateKey(date: Date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return localDateKey(date);
 }
 
 export function parseDateKey(value: string) {
@@ -14,8 +12,7 @@ export function parseDateKey(value: string) {
 }
 
 export function taskDateKey(task: Pick<Task, "dueAt" | "allDay">) {
-  if (!task.dueAt) return null;
-  return task.allDay ? task.dueAt.slice(0, 10) : dateKey(new Date(task.dueAt));
+  return taskEndDateKey(task);
 }
 
 export function addDays(value: string, amount: number) {
@@ -50,12 +47,8 @@ export function monthKeys(value: string) {
   return Array.from({ length: 42 }, (_, index) => addDays(first, index));
 }
 
-export function groupTasksByDate(tasks: Task[]) {
-  const groups = new Map<string, Task[]>();
-  for (const task of tasks) {
-    const key = taskDateKey(task);
-    if (!key) continue;
-    groups.set(key, [...(groups.get(key) ?? []), task]);
-  }
+export function groupTasksByDate(tasks: Task[], keys: string[]) {
+  const groups = new Map(keys.map(key => [key, [] as Task[]]));
+  for (const key of keys) for (const task of tasks) if (taskOccursOnDate(task, key)) groups.get(key)!.push(task);
   return groups;
 }

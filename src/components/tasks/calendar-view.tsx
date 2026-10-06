@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { addDays, dateKey, groupTasksByDate, monthKeys, moveMonth, parseDateKey, taskDateKey, weekKeys, type CalendarView } from "@/lib/calendar";
-import { taskColorSwatches, type Task } from "@/lib/todo-validation";
+import { addDays, dateKey, groupTasksByDate, monthKeys, moveMonth, parseDateKey, weekKeys, type CalendarView } from "@/lib/calendar";
+import { taskColorSwatches, taskOccursOnDate, type Task } from "@/lib/todo-validation";
 import { Button } from "@/components/ui/button";
 import { CompleteTask } from "./task-controls";
 import { TaskEditor } from "./task-editor";
@@ -14,7 +14,7 @@ function displayDay(key: string, options: Intl.DateTimeFormatOptions) {
 }
 
 function CalendarTask({ task }: { task: Task }) {
-  const time = task.allDay ? "All day" : new Date(task.dueAt!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const time = task.startAt ? "Date range" : task.allDay ? "All day" : new Date(task.dueAt!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   return <div data-calendar-task={task.id} className="min-w-0 rounded-xl border border-border bg-card/80 p-1 shadow-sm">
     <Link href={`/tasks/${task.id}`} aria-label={task.title} title={task.title} className="block min-w-0 rounded-lg px-2 pt-2 outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <span className="flex min-w-0 items-center gap-2"><span className={`size-2.5 shrink-0 rounded-full ${taskColorSwatches[task.color]}`} /><span className={`truncate text-sm font-medium ${task.isDone ? "text-muted-foreground line-through" : ""}`}>{task.title}</span></span>
@@ -46,13 +46,13 @@ function PeriodNavigation({ view, selectedDate, onDate }: { view: Exclude<Calend
 }
 
 function DayView({ tasks, selectedDate }: { tasks: Task[]; selectedDate: string }) {
-  const visible = tasks.filter(task => taskDateKey(task) === selectedDate);
+  const visible = tasks.filter(task => taskOccursOnDate(task, selectedDate));
   return visible.length ? <><p className="mb-4 text-sm text-muted-foreground">{visible.length} {visible.length === 1 ? "task" : "tasks"} scheduled</p><TaskList tasks={visible} showParent /></> : <EmptyPeriod text="Choose another date or add a task for this day." selectedDate={selectedDate} />;
 }
 
 function WeekView({ tasks, selectedDate, onDate, onDay }: { tasks: Task[]; selectedDate: string; onDate: (date: string) => void; onDay: () => void }) {
   const keys = weekKeys(selectedDate);
-  const grouped = groupTasksByDate(tasks);
+  const grouped = groupTasksByDate(tasks, keys);
   const count = keys.reduce((total, key) => total + (grouped.get(key)?.length ?? 0), 0);
   if (!count) return <EmptyPeriod text="This week is clear. Add a dated task or move to another week." selectedDate={selectedDate} />;
   return <div className="grid gap-3 lg:grid-cols-7">{keys.map(key => <section key={key} className="min-w-0 rounded-2xl border border-border bg-card/40 p-2" aria-label={displayDay(key, { weekday: "long", month: "long", day: "numeric" })}>
@@ -63,7 +63,7 @@ function WeekView({ tasks, selectedDate, onDate, onDay }: { tasks: Task[]; selec
 
 function MonthView({ tasks, selectedDate, onDate, onDay }: { tasks: Task[]; selectedDate: string; onDate: (date: string) => void; onDay: () => void }) {
   const keys = monthKeys(selectedDate);
-  const grouped = groupTasksByDate(tasks);
+  const grouped = groupTasksByDate(tasks, keys);
   const month = parseDateKey(selectedDate).getMonth();
   const active = keys.filter(key => parseDateKey(key).getMonth() === month && (grouped.get(key)?.length ?? 0) > 0);
   return <>

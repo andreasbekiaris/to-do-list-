@@ -36,6 +36,8 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
   await assert.rejects(db.update(todos).set({ parentId: parent.id }).where(eq(todos.id, parent.id)));
   await assert.rejects(db.update(todos).set({ isDone: true }).where(eq(todos.id, leaf.id)));
   await assert.rejects(db.insert(todos).values({ title: "No date", allDay: true }));
+  await assert.rejects(db.insert(todos).values({ title: "Start without end", startAt: new Date("2026-10-05T00:00:00Z") }));
+  await assert.rejects(db.insert(todos).values({ title: "Reversed range", startAt: new Date("2026-10-10T00:00:00Z"), dueAt: new Date("2026-10-05T00:00:00Z") }));
   await assert.rejects(client.query("INSERT INTO todos (title, color) VALUES ('Bad color', 'neon')"));
 
   await db.update(todos).set({ isDone: true, completedAt: new Date() }).where(eq(todos.id, leaf.id));

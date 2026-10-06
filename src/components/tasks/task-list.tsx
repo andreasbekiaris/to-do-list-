@@ -12,7 +12,10 @@ import { TaskEditor } from "./task-editor";
 export function DueBadge({ task }: { task: Task }) {
   if (!task.dueAt) return null;
   const status = dueStatus(task);
-  const text = new Date(task.dueAt).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", ...(task.allDay ? { timeZone: "UTC" } : { hour: "numeric", minute: "2-digit" }) });
+  const options = { month: "short", day: "numeric", year: "numeric" } as const;
+  const end = new Date(task.dueAt).toLocaleString(undefined, { ...options, ...(task.allDay ? { timeZone: "UTC" } : { hour: "numeric", minute: "2-digit" }) });
+  const start = task.startAt ? new Date(task.startAt).toLocaleDateString(undefined, { ...options, ...(task.allDay ? { timeZone: "UTC" } : {}) }) : null;
+  const text = start ? `${start} – ${end}` : end;
   return <span suppressHydrationWarning className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${status === "overdue" ? "bg-red-50 text-red-700" : status === "today" ? "bg-amber-50 text-amber-800" : "bg-muted text-muted-foreground"}`}><CalendarDays className="size-3.5 shrink-0" aria-hidden="true" /><span suppressHydrationWarning>{status === "overdue" ? "Overdue · " : status === "today" ? "Today · " : ""}{text}</span></span>;
 }
 function moveOptions(task: Task, tasks: Task[]) {

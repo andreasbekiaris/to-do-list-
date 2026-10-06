@@ -28,6 +28,7 @@ Internet access is required to load and save tasks. There is no service-worker c
 ## Use your task dashboard
 
 - Choose **New task** to add a title, optional notes, and a deadline. Leave time blank for a calendar-only due date; timed deadlines use your device’s timezone.
+- Add an optional **Start date** with the due date to make an inclusive task window, such as October 5–10. The task appears on every included Day, Week, and Month calendar date.
 - Open a task to edit it or **Add subtask**. Subtasks can contain further subtasks; breadcrumbs take you back through the tree.
 - **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
 - Use **All tasks**, **Day**, **Week**, and **Month** above the dashboard to switch between the full list and calendar organization. Calendar views include dated tasks from every nesting level. Move backward or forward, jump to Today, or choose a date directly. Tasks without deadlines stay in All tasks.

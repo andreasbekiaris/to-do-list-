@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, calendar organization, and drag-and-drop task reparenting. These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested task-moving work. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, calendar organization, drag-and-drop task reparenting, and optional multi-day task windows. These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested date-window work. Keep local test results separate from production checks.
 
 ## Conventions
 
@@ -23,6 +23,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - Task color is one of `sage`, `sky`, `lavender`, `rose`, `amber`, or `slate` and persists in Postgres. The app theme is intentionally device-local in `localStorage` and must not contain private task data.
 - A todo may have arbitrarily nested children. The FK cascades deletion. Reparenting must reject both self-parenting and longer cycles. Task-list cards support drag-and-drop reparenting plus an accessible Move dialog; moving out on a detail page goes one level up.
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
+- `start_at` is optional and makes `due_at` the inclusive end of a task window. It requires an end, cannot follow it, and uses the same UTC-midnight semantics as an all-day due date. A range appears on every included calendar day; single-date tasks remain unchanged.
 - Calendar weeks begin Monday. Calendar views include dated tasks at every nesting level; undated tasks remain available in All tasks. Timed tasks are grouped by the device's local calendar day, while all-day tasks use their stored UTC date components.
 - No native apps, sharing, push notifications, offline writes, websockets, or realtime services.
 - Anthropic is Phase 3 only: Vercel AI SDK, `claude-haiku-4-5-20251001`, Zod output, max 500 input chars, explicit preview/accept, preserve Greek/English. `ANTHROPIC_API_KEY` belongs only in Vercel environment settings.

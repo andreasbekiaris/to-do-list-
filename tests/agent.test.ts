@@ -28,7 +28,7 @@ test("the token must be long and must match exactly", () => {
   assert.equal(tokenMatches(null, token), false);
 });
 test("add and edit validate like the app and keep unchanged fields", async () => {
-  const root = await add("Plan the week", { description: "Notes", dueAt: "2026-10-05T00:00:00.000Z", allDay: true });
+  const root = await add("Plan the week", { description: "Notes", startAt: "2026-10-01T00:00:00.000Z", dueAt: "2026-10-05T00:00:00.000Z", allDay: true });
   const child = await add("Book the gym", { parentId: root });
   assert.equal((await run({ op: "add", title: "   " })).status, 400);
   assert.equal((await run({ op: "add", title: "Orphan", parentId: crypto.randomUUID() })).status, 404);
@@ -37,6 +37,8 @@ test("add and edit validate like the app and keep unchanged fields", async () =>
   assert.equal(detail?.title, "Plan the week properly");
   assert.equal(detail?.description, "Notes");
   assert.equal(detail?.allDay, true);
+  assert.equal(detail?.startAt, "2026-10-01T00:00:00.000Z");
+  assert.equal((await run({ op: "add", title: "Backwards", startAt: "2026-10-06T00:00:00.000Z", dueAt: "2026-10-05T00:00:00.000Z", allDay: true })).status, 400);
   assert.equal((await run({ op: "edit", id: child, dueAt: null })).status, 200);
   assert.equal((await repository.detail(child))?.color, "sage");
   assert.equal((await run({ op: "edit", id: child, color: "rose" })).status, 200);

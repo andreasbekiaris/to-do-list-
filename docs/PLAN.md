@@ -2,7 +2,7 @@
 
 Thread is a single-user nested to-do app used from a Mac, Windows PC, and phone. One Next.js app hosted on Vercel becomes the installable desktop/mobile app via PWA support. No native clients.
 
-Stop after each phase and summarize for review. The owner reported successful production registration and login. Phase 2 task features are deployed. The user then requested desktop installation, appearance customization, Day/Week/Month calendar organization, and drag-and-drop reparenting with the ability to move tasks back out, authorizing those additions ahead of Phase 3. AI writing remains deferred.
+Stop after each phase and summarize for review. The owner reported successful production registration and login. Phase 2 task features are deployed. The user then requested desktop installation, appearance customization, Day/Week/Month calendar organization, drag-and-drop reparenting with the ability to move tasks back out, and optional multi-day task windows, authorizing those additions ahead of Phase 3. AI writing remains deferred.
 
 ## Phase 1 — foundation
 
@@ -52,6 +52,7 @@ Stop after each phase and summarize for review. The owner reported successful pr
 | `description` | Text, defaults to empty |
 | `is_done` | Boolean, defaults to false |
 | `completed_at` | Nullable timestamptz; must agree with completion flag |
+| `start_at` | Nullable timestamptz; inclusive range start, requires and cannot follow `due_at` |
 | `due_at` | Nullable timestamptz |
 | `all_day` | Boolean; true requires a due date |
 | `sort_order` | Integer, defaults to zero |

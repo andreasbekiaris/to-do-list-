@@ -24,6 +24,7 @@ export const todos = pgTable(
     color: varchar("color", { length: 16 }).notNull().default("sage"),
     isDone: boolean("is_done").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    startAt: timestamp("start_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
     allDay: boolean("all_day").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -43,6 +44,7 @@ export const todos = pgTable(
       sql`${table.isDone} = (${table.completedAt} IS NOT NULL)`,
     ),
     check("todos_all_day_has_date", sql`NOT ${table.allDay} OR ${table.dueAt} IS NOT NULL`),
+    check("todos_start_before_due", sql`${table.startAt} IS NULL OR (${table.dueAt} IS NOT NULL AND ${table.startAt} <= ${table.dueAt})`),
   ],
 );
 

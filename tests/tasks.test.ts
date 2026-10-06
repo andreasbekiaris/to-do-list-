@@ -9,7 +9,7 @@ import { addDays, groupTasksByDate, monthKeys, moveMonth, startOfWeek, taskDateK
 const client = new PGlite();
 const db = drizzle(client);
 const repository = createTodoRepository(query => db.execute(query));
-const input = { title: "A task", description: "Notes", color: "sage" as const, dueAt: null, allDay: false };
+const input = { title: "A task", description: "Notes", color: "sage" as const, startAt: null, dueAt: null, allDay: false };
 before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
 beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
 after(async () => { await client.close(); });
@@ -22,9 +22,10 @@ async function tree() {
 test("nested tasks persist notes/dates, resolve ordered breadcrumbs, and report direct progress", async () => {
   const { root, child, leaf } = await tree();
   assert.deepEqual((await repository.breadcrumbs(leaf)).map(item => item.title), ["Root", "Child", "Leaf"]);
-  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", color: "lavender", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
+  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", color: "lavender", startAt: "2026-12-20T00:00:00.000Z", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
   assert.equal((await repository.detail(leaf))?.description, "Ελληνικές σημειώσεις");
   assert.equal((await repository.detail(leaf))?.color, "lavender");
+  assert.equal((await repository.detail(leaf))?.startAt, "2026-12-20T00:00:00.000Z");
   assert.equal((await repository.detail(leaf))?.dueAt, "2026-12-24T00:00:00.000Z");
   await repository.complete(child, true, "only", []);
   assert.equal((await repository.detail(root))?.childCount, 1);
@@ -78,10 +79,15 @@ test("date-only deadlines stay on the calendar date; timed deadlines and done fi
   assert.equal(dueStatus({ ...task, dueAt: "2026-10-04T00:00:00.000Z" }, now), "upcoming");
   assert.equal(dueStatus({ ...task, allDay: false, dueAt: new Date(now.getTime()-1000).toISOString() }, now), "overdue");
   assert.equal(matchesFilter({ ...task, allDay: false, dueAt: new Date(now.getTime()-1000).toISOString() }, "Today", now), true);
+  const range = { ...task, startAt: "2026-10-01T00:00:00.000Z", dueAt: "2026-10-05T00:00:00.000Z" };
+  assert.equal(matchesFilter(range, "Today", now), true);
+  assert.equal(dueStatus(range, now), "upcoming");
   assert.equal(matchesFilter({ ...task, isDone: true }, "Overdue", now), false);
   assert.equal(matchesFilter({ ...task, isDone: true }, "Done", now), true);
   assert.equal(todoInputSchema.safeParse({ ...input, title: "   " }).success, false);
   assert.equal(todoInputSchema.safeParse({ ...input, allDay: true }).success, false);
+  assert.equal(todoInputSchema.safeParse({ ...input, startAt: "2026-10-05T00:00:00.000Z" }).success, false);
+  assert.equal(todoInputSchema.safeParse({ ...input, startAt: "2026-10-06T00:00:00.000Z", dueAt: "2026-10-05T00:00:00.000Z", allDay: true }).success, false);
 });
 test("calendar helpers group deadlines into Monday weeks and complete month grids", () => {
   const dated: Task = { ...input, id: "dated", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2027-05-12T00:00:00.000Z" };
@@ -93,5 +99,10 @@ test("calendar helpers group deadlines into Monday weeks and complete month grid
   assert.equal(addDays("2027-03-28", 1), "2027-03-29");
   assert.equal(moveMonth("2027-01-31", 1), "2027-02-01");
   assert.equal(monthKeys("2027-05-12").length, 42);
-  assert.deepEqual(groupTasksByDate([dated, undated]).get("2027-05-12")?.map(task => task.id), ["dated"]);
+  const range = { ...dated, id: "range", startAt: "2027-05-10T00:00:00.000Z" };
+  const keys = weekKeys("2027-05-12");
+  const grouped = groupTasksByDate([dated, undated, range], keys);
+  assert.deepEqual(grouped.get("2027-05-10")?.map(task => task.id), ["range"]);
+  assert.deepEqual(grouped.get("2027-05-11")?.map(task => task.id), ["range"]);
+  assert.deepEqual(grouped.get("2027-05-12")?.map(task => task.id), ["dated", "range"]);
 });
