@@ -217,3 +217,20 @@ test("tasks can be dragged inside another task and moved back out", async ({ pag
   await expect(page.getByRole("link", { name: "Loose errand", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("long task titles wrap without overlapping move and edit controls", async ({ page }, testInfo) => {
+  const title = "Prepare the extraordinarilylongunbrokentasktitlethatmustwrapinsideitsowncolumn before tomorrow morning";
+  await add(page, title);
+  const card = page.locator('article[data-task-id]').filter({ has: page.getByRole("link", { name: title, exact: true }) });
+  const titleBox = await card.locator("[data-task-title]").boundingBox();
+  const moveBox = await card.getByRole("button", { name: `Move ${title}`, exact: true }).boundingBox();
+  const editBox = await card.getByRole("button", { name: `Edit ${title}`, exact: true }).boundingBox();
+  expect(titleBox).not.toBeNull();
+  expect(moveBox).not.toBeNull();
+  expect(editBox).not.toBeNull();
+  expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(moveBox!.x);
+  expect(moveBox!.x + moveBox!.width).toBeLessThanOrEqual(editBox!.x);
+  expect(titleBox!.height).toBeGreaterThan(28);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `/tmp/thread-long-title-${testInfo.project.name}.png`, fullPage: true });
+});
