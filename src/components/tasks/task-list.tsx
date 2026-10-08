@@ -1,7 +1,7 @@
 "use client";
 import { type DragEvent, type FormEvent, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, CornerDownRight, GripVertical, LoaderCircle, MoveRight } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CheckCircle2, ChevronDown, CornerDownRight, GripVertical, LoaderCircle, MoveRight } from "lucide-react";
 import { moveTask } from "@/app/tasks/actions";
 import { dueStatus, taskColorClasses, type Task } from "@/lib/todo-validation";
 import { Button } from "@/components/ui/button";
@@ -90,4 +90,31 @@ export function TaskList({ tasks, allTasks = tasks, showParent = false, outParen
   </article>)}</div>
     {movingTask && <MoveTaskDialog task={movingTask} tasks={allTasks} onClose={() => setMovingTask(null)} />}
   </div>;
+}
+
+export function CompletedTaskHistory({ tasks }: { tasks: Task[] }) {
+  const [open, setOpen] = useState(false);
+  if (!tasks.length) return null;
+  const ordered = open ? [...tasks].sort((left, right) => {
+    const leftTime = left.completedAt ? Date.parse(left.completedAt) : 0;
+    const rightTime = right.completedAt ? Date.parse(right.completedAt) : 0;
+    return rightTime - leftTime;
+  }) : [];
+  return <details onToggle={event => setOpen(event.currentTarget.open)} className="group mt-8 overflow-hidden rounded-2xl border border-border bg-card/60">
+    <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm font-medium marker:content-none hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+      <CheckCircle2 className="size-5 text-primary" aria-hidden="true" />
+      <span className="flex-1">Completed history</span>
+      <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{tasks.length}</span>
+      <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+    </summary>
+    {open && <div className="divide-y divide-border border-t border-border">
+      {ordered.map(task => <div key={task.id} className="flex min-w-0 items-center gap-2 px-3 py-2 sm:px-4">
+        <CompleteTask task={task} />
+        <div className="min-w-0 flex-1">
+          <Link href={`/tasks/${task.id}`} className="block truncate rounded-md font-medium text-muted-foreground line-through outline-none focus-visible:ring-2 focus-visible:ring-ring">{task.title}</Link>
+          <p suppressHydrationWarning className="mt-0.5 truncate text-xs text-muted-foreground">{task.parentTitle ? `${task.parentTitle} · ` : ""}{task.completedAt ? `Finished ${new Date(task.completedAt).toLocaleDateString()}` : "Finished"}</p>
+        </div>
+      </div>)}
+    </div>}
+  </details>;
 }

@@ -32,7 +32,7 @@ export const todoInputSchema = z.object({
   if (value.startAt && value.dueAt && new Date(value.startAt) > new Date(value.dueAt)) context.addIssue({ code: "custom", message: "The start date must be on or before the end date." });
 });
 export type TodoInput = z.infer<typeof todoInputSchema>;
-export type Task = TodoInput & { id: string; parentId: string | null; isDone: boolean; childCount: number; completedChildren: number; parentTitle: string | null };
+export type Task = TodoInput & { id: string; parentId: string | null; isDone: boolean; completedAt: string | null; childCount: number; completedChildren: number; parentTitle: string | null };
 export type TaskResult = { ok: true; id?: string } | { ok: false; error: string; confirmIds?: string[] };
 export const filters = ["All", "Today", "Upcoming", "Overdue", "Done"] as const;
 export type TaskFilter = typeof filters[number];

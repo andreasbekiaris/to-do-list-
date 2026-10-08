@@ -103,6 +103,24 @@ test("deadline filters, search, timed editing and optimistic failure rollback", 
   await expect(page.getByText("No tasks match your search. Try another word.")).toBeVisible();
 });
 
+test("completed tasks move into a collapsed history below open tasks and can be restored", async ({ page }) => {
+  await add(page, "Still open");
+  await add(page, "Finished already");
+
+  await page.getByRole("checkbox", { name: "Complete Finished already", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Still open", exact: true })).toBeVisible();
+  await expect(page.getByText("Completed history", { exact: true })).toBeVisible();
+  await expect(page.getByText("Completed history", { exact: true }).locator("..")).toContainText("1");
+  await expect(page.getByRole("link", { name: "Finished already", exact: true })).not.toBeVisible();
+
+  await page.getByText("Completed history", { exact: true }).click();
+  await expect(page.getByRole("link", { name: "Finished already", exact: true })).toBeVisible();
+  await expect(page.getByText(/Finished \d{1,2}\/\d{1,2}\/\d{4}/)).toBeVisible();
+  await page.getByRole("checkbox", { name: "Complete Finished already", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Finished already", exact: true })).toBeVisible();
+  await expect(page.getByText("Completed history", { exact: true })).toHaveCount(0);
+});
+
 test("anonymous action replay cannot create tasks or read a private task page", async ({ page, playwright }) => {
   const mutation = page.waitForRequest(request => request.method() === "POST" && !!request.headers()["next-action"]);
   await add(page, "Authorized task");

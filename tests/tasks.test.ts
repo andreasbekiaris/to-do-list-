@@ -73,7 +73,7 @@ test("tasks can move under another task or back out without creating cycles", as
 });
 test("date-only deadlines stay on the calendar date; timed deadlines and done filters differ", () => {
   const now = new Date(2026, 9, 3, 12);
-  const task: Task = { ...input, id: "unused", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2026-10-03T00:00:00.000Z" };
+  const task: Task = { ...input, id: "unused", parentId: null, isDone: false, completedAt: null, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2026-10-03T00:00:00.000Z" };
   assert.equal(dueStatus(task, now), "today");
   assert.equal(dueStatus({ ...task, dueAt: "2026-10-02T00:00:00.000Z" }, now), "overdue");
   assert.equal(dueStatus({ ...task, dueAt: "2026-10-04T00:00:00.000Z" }, now), "upcoming");
@@ -90,7 +90,7 @@ test("date-only deadlines stay on the calendar date; timed deadlines and done fi
   assert.equal(todoInputSchema.safeParse({ ...input, startAt: "2026-10-06T00:00:00.000Z", dueAt: "2026-10-05T00:00:00.000Z", allDay: true }).success, false);
 });
 test("calendar helpers group deadlines into Monday weeks and complete month grids", () => {
-  const dated: Task = { ...input, id: "dated", parentId: null, isDone: false, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2027-05-12T00:00:00.000Z" };
+  const dated: Task = { ...input, id: "dated", parentId: null, isDone: false, completedAt: null, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2027-05-12T00:00:00.000Z" };
   const undated: Task = { ...dated, id: "undated", dueAt: null };
   assert.equal(taskDateKey(dated), "2027-05-12");
   assert.equal(taskDateKey(undated), null);

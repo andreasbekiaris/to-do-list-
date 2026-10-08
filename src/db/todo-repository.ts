@@ -5,10 +5,10 @@ import type { TodoInput, Task } from "@/lib/todo-validation";
 type Execute = (query: SQL) => Promise<{ rows: Record<string, unknown>[] }>;
 const taskSchema = z.object({
   id: z.uuid(), parentId: z.uuid().nullable(), title: z.string(), description: z.string(), color: z.enum(["sage", "sky", "lavender", "rose", "amber", "slate"]),
-  isDone: z.boolean(), allDay: z.boolean(), startAt: z.coerce.date().transform(d => d.toISOString()).nullable(), dueAt: z.coerce.date().transform(d => d.toISOString()).nullable(),
+  isDone: z.boolean(), completedAt: z.coerce.date().transform(d => d.toISOString()).nullable(), allDay: z.boolean(), startAt: z.coerce.date().transform(d => d.toISOString()).nullable(), dueAt: z.coerce.date().transform(d => d.toISOString()).nullable(),
   childCount: z.coerce.number(), completedChildren: z.coerce.number(), parentTitle: z.string().nullable(),
 });
-const columns = sql`t.id, t.parent_id AS "parentId", t.title, t.description, t.color, t.is_done AS "isDone", t.all_day AS "allDay", t.start_at AS "startAt", t.due_at AS "dueAt",
+const columns = sql`t.id, t.parent_id AS "parentId", t.title, t.description, t.color, t.is_done AS "isDone", t.completed_at AS "completedAt", t.all_day AS "allDay", t.start_at AS "startAt", t.due_at AS "dueAt",
   (SELECT count(*)::int FROM todos c WHERE c.parent_id=t.id) AS "childCount",
   (SELECT count(*)::int FROM todos c WHERE c.parent_id=t.id AND c.is_done) AS "completedChildren",
   (SELECT title FROM todos p WHERE p.id=t.parent_id) AS "parentTitle"`;
