@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { createTodoRepository } from "@/db/todo-repository";
-import { taskColors, todoInputSchema, type Task } from "@/lib/todo-validation";
+import { taskColors, taskPriorities, todoInputSchema, type Task } from "@/lib/todo-validation";
 
 // The assistant API (Jarvis): one owner's tasks, behind a long random bearer token.
 type Repository = ReturnType<typeof createTodoRepository>;
@@ -19,7 +19,7 @@ export function tokenMatches(header: string | null, token: string) {
 }
 
 const id = z.uuid();
-const optionalDue = { startAt: z.iso.datetime().nullable().optional(), dueAt: z.iso.datetime().nullable().optional(), allDay: z.boolean().optional(), color: z.enum(taskColors).optional() };
+const optionalDue = { startAt: z.iso.datetime().nullable().optional(), dueAt: z.iso.datetime().nullable().optional(), allDay: z.boolean().optional(), color: z.enum(taskColors).optional(), priority: z.enum(taskPriorities).optional() };
 const operation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("add"), title: z.string(), description: z.string().optional(), parentId: id.nullable().optional(), ...optionalDue }),
   z.object({ op: z.literal("edit"), id, title: z.string().optional(), description: z.string().optional(), ...optionalDue }),
@@ -32,7 +32,7 @@ const operation = z.discriminatedUnion("op", [
 const fail = (status: number, error: string): AgentResult => ({ status, body: { ok: false, error } });
 const done = (body: Record<string, unknown> = {}): AgentResult => ({ status: 200, body: { ok: true, ...body } });
 
-function validInput(base: Pick<Task, "title" | "description" | "color" | "startAt" | "dueAt" | "allDay">) {
+function validInput(base: Pick<Task, "title" | "description" | "color" | "priority" | "startAt" | "dueAt" | "allDay">) {
   const parsed = todoInputSchema.safeParse(base);
   return parsed.success ? { ok: true as const, data: parsed.data } : { ok: false as const, error: parsed.error.issues[0].message };
 }
@@ -48,7 +48,7 @@ export async function runOperation(repository: Repository, raw: unknown): Promis
   const request = parsed.data;
   switch (request.op) {
     case "add": {
-      const input = validInput({ title: request.title, description: request.description ?? "", color: request.color ?? "sage", startAt: request.startAt ?? null, dueAt: request.dueAt ?? null, allDay: request.allDay ?? false });
+      const input = validInput({ title: request.title, description: request.description ?? "", color: request.color ?? "sage", priority: request.priority ?? "none", startAt: request.startAt ?? null, dueAt: request.dueAt ?? null, allDay: request.allDay ?? false });
       if (!input.ok) return fail(400, input.error);
       const created = await repository.create(input.data, request.parentId ?? null);
       return created ? done({ id: created }) : fail(404, "The parent task doesn't exist.");
@@ -57,7 +57,7 @@ export async function runOperation(repository: Repository, raw: unknown): Promis
       const current = await repository.detail(request.id);
       if (!current) return fail(404, "No such task.");
       const input = validInput({
-        title: request.title ?? current.title, description: request.description ?? current.description, color: request.color ?? current.color,
+        title: request.title ?? current.title, description: request.description ?? current.description, color: request.color ?? current.color, priority: request.priority ?? current.priority,
         startAt: request.startAt === undefined ? (request.dueAt === null ? null : current.startAt) : request.startAt,
         dueAt: request.dueAt === undefined ? current.dueAt : request.dueAt, allDay: request.allDay ?? (request.dueAt === null ? false : current.allDay),
       });
@@ -88,7 +88,7 @@ export async function runOperation(repository: Repository, raw: unknown): Promis
       const notes = [target.description, source.description ? `Merged from “${source.title}”:\n${source.description}` : `Merged from “${source.title}”.`]
         .filter(Boolean).join("\n\n");
       const input = validInput({
-        title: request.title ?? target.title, description: request.description ?? notes, color: target.color,
+        title: request.title ?? target.title, description: request.description ?? notes, color: target.color, priority: target.priority,
         startAt: target.startAt ?? (target.dueAt ? null : source.startAt), dueAt: target.dueAt ?? source.dueAt, allDay: target.dueAt ? target.allDay : source.allDay,
       });
       if (!input.ok) return fail(400, input.error);

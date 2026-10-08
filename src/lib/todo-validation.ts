@@ -17,10 +17,20 @@ export const taskColorSwatches: Record<TaskColor, string> = {
   sage: "bg-emerald-500", sky: "bg-sky-500", lavender: "bg-violet-500", rose: "bg-rose-500", amber: "bg-amber-500", slate: "bg-slate-500",
 };
 
+export const taskPriorities = ["none", "low", "medium", "high", "urgent"] as const;
+export type TaskPriority = typeof taskPriorities[number];
+export const taskPriorityNames: Record<TaskPriority, string> = {
+  none: "None", low: "Low", medium: "Medium", high: "High", urgent: "Urgent",
+};
+export const taskPriorityClasses: Record<TaskPriority, string> = {
+  none: "bg-muted text-muted-foreground", low: "bg-sky-100 text-sky-800", medium: "bg-amber-100 text-amber-800", high: "bg-orange-100 text-orange-800", urgent: "bg-red-100 text-red-800",
+};
+
 export const todoInputSchema = z.object({
   title: z.string().trim().min(1, "Give your task a title.").max(500, "Keep the title under 500 characters."),
   description: z.string().max(20000, "Keep notes under 20,000 characters."),
   color: z.enum(taskColors),
+  priority: z.enum(taskPriorities),
   startAt: z.iso.datetime().nullable(),
   dueAt: z.iso.datetime().nullable(),
   allDay: z.boolean(),
@@ -36,6 +46,7 @@ export type Task = TodoInput & { id: string; parentId: string | null; isDone: bo
 export type TaskResult = { ok: true; id?: string } | { ok: false; error: string; confirmIds?: string[] };
 export const filters = ["All", "Today", "Upcoming", "Overdue", "Done"] as const;
 export type TaskFilter = typeof filters[number];
+export type TaskSort = "default" | "date" | "priority";
 
 export function localDateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -69,4 +80,23 @@ export function matchesFilter(task: Task, filter: TaskFilter, now = new Date()) 
     return taskOccursOnDate(task, localDateKey(now));
   }
   return dueStatus(task, now) === filter.toLowerCase();
+}
+
+const priorityRank: Record<TaskPriority, number> = { none: 0, low: 1, medium: 2, high: 3, urgent: 4 };
+
+function distanceFromDate(task: Task, now: Date) {
+  if (!task.dueAt) return Number.POSITIVE_INFINITY;
+  if (taskOccursOnDate(task, localDateKey(now))) return 0;
+  const dates = [task.startAt, task.dueAt].filter((value): value is string => !!value);
+  return Math.min(...dates.map(value => Math.abs(new Date(value).getTime() - now.getTime())));
+}
+
+export function sortTasks(tasks: Task[], sort: TaskSort, now = new Date()) {
+  if (sort === "default") return tasks;
+  return tasks.map((task, index) => ({ task, index })).sort((left, right) => {
+    const difference = sort === "priority"
+      ? priorityRank[right.task.priority] - priorityRank[left.task.priority]
+      : distanceFromDate(left.task, now) - distanceFromDate(right.task, now);
+    return difference || left.index - right.index;
+  }).map(item => item.task);
 }

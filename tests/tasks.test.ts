@@ -4,12 +4,12 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { createTodoRepository } from "../src/db/todo-repository";
-import { dueStatus, matchesFilter, todoInputSchema, type Task } from "../src/lib/todo-validation";
+import { dueStatus, matchesFilter, sortTasks, todoInputSchema, type Task } from "../src/lib/todo-validation";
 import { addDays, groupTasksByDate, monthKeys, moveMonth, startOfWeek, taskDateKey, weekKeys } from "../src/lib/calendar";
 const client = new PGlite();
 const db = drizzle(client);
 const repository = createTodoRepository(query => db.execute(query));
-const input = { title: "A task", description: "Notes", color: "sage" as const, startAt: null, dueAt: null, allDay: false };
+const input = { title: "A task", description: "Notes", color: "sage" as const, priority: "none" as const, startAt: null, dueAt: null, allDay: false };
 before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
 beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
 after(async () => { await client.close(); });
@@ -22,9 +22,10 @@ async function tree() {
 test("nested tasks persist notes/dates, resolve ordered breadcrumbs, and report direct progress", async () => {
   const { root, child, leaf } = await tree();
   assert.deepEqual((await repository.breadcrumbs(leaf)).map(item => item.title), ["Root", "Child", "Leaf"]);
-  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", color: "lavender", startAt: "2026-12-20T00:00:00.000Z", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
+  await repository.edit(leaf, { title: "Updated", description: "Ελληνικές σημειώσεις", color: "lavender", priority: "high", startAt: "2026-12-20T00:00:00.000Z", dueAt: "2026-12-24T00:00:00.000Z", allDay: true });
   assert.equal((await repository.detail(leaf))?.description, "Ελληνικές σημειώσεις");
   assert.equal((await repository.detail(leaf))?.color, "lavender");
+  assert.equal((await repository.detail(leaf))?.priority, "high");
   assert.equal((await repository.detail(leaf))?.startAt, "2026-12-20T00:00:00.000Z");
   assert.equal((await repository.detail(leaf))?.dueAt, "2026-12-24T00:00:00.000Z");
   await repository.complete(child, true, "only", []);
@@ -105,4 +106,16 @@ test("calendar helpers group deadlines into Monday weeks and complete month grid
   assert.deepEqual(grouped.get("2027-05-10")?.map(task => task.id), ["range"]);
   assert.deepEqual(grouped.get("2027-05-11")?.map(task => task.id), ["range"]);
   assert.deepEqual(grouped.get("2027-05-12")?.map(task => task.id), ["dated", "range"]);
+});
+test("tasks sort by closest date or highest priority while undated tasks come last", () => {
+  const now = new Date("2027-05-12T12:00:00.000Z");
+  const base: Task = { ...input, id: "base", parentId: null, isDone: false, completedAt: null, childCount: 0, completedChildren: 0, parentTitle: null };
+  const tasks: Task[] = [
+    { ...base, id: "undated-high", title: "Undated high", priority: "high" },
+    { ...base, id: "far-urgent", title: "Far urgent", priority: "urgent", dueAt: "2027-06-12T00:00:00.000Z", allDay: true },
+    { ...base, id: "near-low", title: "Near low", priority: "low", dueAt: "2027-05-13T00:00:00.000Z", allDay: true },
+  ];
+  assert.deepEqual(sortTasks(tasks, "date", now).map(task => task.id), ["near-low", "far-urgent", "undated-high"]);
+  assert.deepEqual(sortTasks(tasks, "priority", now).map(task => task.id), ["far-urgent", "undated-high", "near-low"]);
+  assert.deepEqual(sortTasks(tasks, "default", now), tasks);
 });

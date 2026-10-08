@@ -121,6 +121,29 @@ test("completed tasks move into a collapsed history below open tasks and can be 
   await expect(page.getByText("Completed history", { exact: true })).toHaveCount(0);
 });
 
+test("tasks can be prioritized and sorted by closest date or highest priority", async ({ page }) => {
+  await add(page, "Far urgent", false, "2099-12-31");
+  await add(page, "Soon low", false, "2099-01-01");
+  await add(page, "Undated high");
+
+  for (const [title, priority] of [["Far urgent", "urgent"], ["Soon low", "low"], ["Undated high", "high"]] as const) {
+    const card = page.locator("article[data-task-id]").filter({ has: page.getByRole("link", { name: title, exact: true }) });
+    await card.getByRole("button", { name: `Edit ${title}`, exact: true }).click();
+    await page.getByRole("dialog").getByLabel("Priority", { exact: true }).selectOption(priority);
+    await page.getByRole("dialog").getByRole("button", { name: "Save changes", exact: true }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+  }
+
+  const titles = () => page.locator("article[data-task-id] [data-task-title]").allTextContents();
+  await page.getByLabel("Sort tasks", { exact: true }).selectOption("date");
+  await expect.poll(titles).toEqual(["Soon low", "Far urgent", "Undated high"]);
+  await page.getByLabel("Sort tasks", { exact: true }).selectOption("priority");
+  await expect.poll(titles).toEqual(["Far urgent", "Undated high", "Soon low"]);
+  await expect(page.getByText("Urgent", { exact: true })).toBeVisible();
+  await expect(page.getByText("High", { exact: true })).toBeVisible();
+  await expect(page.getByText("Low", { exact: true })).toBeVisible();
+});
+
 test("anonymous action replay cannot create tasks or read a private task page", async ({ page, playwright }) => {
   const mutation = page.waitForRequest(request => request.method() === "POST" && !!request.headers()["next-action"]);
   await add(page, "Authorized task");

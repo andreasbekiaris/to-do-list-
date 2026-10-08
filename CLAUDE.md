@@ -2,7 +2,7 @@
 
 # Thread: personal nested to-dos
 
-Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, calendar organization, drag-and-drop task reparenting, and optional multi-day task windows. These additions are authorized ahead of Phase 3; AI remains deferred. Stop after the requested date-window work. Keep local test results separate from production checks.
+Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed production login and has since authorized desktop installation, task colors/device-local themes, calendar organization, drag-and-drop task reparenting, optional multi-day task windows, completed-task history, and task priority/sorting. These additions are authorized ahead of Phase 3; AI remains deferred. Keep local test results separate from production checks.
 
 ## Conventions
 
@@ -21,6 +21,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - Change `src/db/schema.ts`, generate and review a new Drizzle migration, and commit the SQL and metadata. Never edit an already applied migration or use `db:push` in production.
 - Todo title: nonblank, max 500 chars. Update `isDone` and `completedAt` together. `updatedAt` is set by Drizzle's `$onUpdate`; raw SQL mutations must update it explicitly.
 - Task color is one of `sage`, `sky`, `lavender`, `rose`, `amber`, or `slate` and persists in Postgres. The app theme is intentionally device-local in `localStorage` and must not contain private task data.
+- Task priority is one of `none`, `low`, `medium`, `high`, or `urgent`. Existing tasks default to `none`; priority sorting is urgent-first and date sorting uses the closest task boundary with undated tasks last.
 - A todo may have arbitrarily nested children. The FK cascades deletion. Reparenting must reject both self-parenting and longer cycles. Task-list cards support drag-and-drop reparenting plus an accessible Move dialog; moving out on a detail page goes one level up.
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
 - `start_at` is optional and makes `due_at` the inclusive end of a task window. It requires an end, cannot follow it, and uses the same UTC-midnight semantics as an all-day due date. A range appears on every included calendar day; single-date tasks remain unchanged.

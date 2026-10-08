@@ -29,15 +29,17 @@ Internet access is required to load and save tasks. There is no service-worker c
 
 - Choose **New task** to add a title, optional notes, and a deadline. Leave time blank for a calendar-only due date; timed deadlines use your device’s timezone.
 - Add an optional **Start date** with the due date to make an inclusive task window, such as October 5–10. The task appears on every included Day, Week, and Month calendar date.
+- Choose **Low**, **Medium**, **High**, or **Urgent** priority, or leave it as **None**. The priority badge is saved with the task on every device.
 - Open a task to edit it or **Add subtask**. Subtasks can contain further subtasks; breadcrumbs take you back through the tree.
 - **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
+- Use **Sort tasks** to keep the default order, put the closest dated task first, or put the highest-priority task first. Undated tasks appear last when sorting by date.
 - Use **All tasks**, **Day**, **Week**, and **Month** above the dashboard to switch between the full list and calendar organization. Calendar views include dated tasks from every nesting level. Move backward or forward, jump to Today, or choose a date directly. Tasks without deadlines stay in All tasks.
 - Selecting a day number in Week or Month opens that day. Creating a task while a calendar view is active preselects the current calendar date.
 - In All tasks or a task's Smaller steps list, drag one task card onto another to make it a subtask. Use the dashed drop area to move it back out (one level up), or use the card's move handle to choose a parent on touch screens and with a keyboard.
-- Check a task to complete it. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
+- Check a task to complete it. Completed tasks move into the collapsed history below the open list and retain their completion date; open the history to review or restore one. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
 - Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you return to the app, navigate, or refresh.
 
-This phase uses the existing `todos` table and requires no additional migration. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
+This phase uses the existing `todos` table with additive migrations for colors, date windows, and priorities. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
 
 ## Assistant access (Jarvis)
 
@@ -49,7 +51,7 @@ the API off.
 
 - `GET /api/agent/tasks` lists every task (any depth).
 - `POST /api/agent/tasks` with one operation: `add` (title, description,
-  color, dueAt, allDay, parentId), `edit`, `complete` (done, includeSubtasks),
+  color, priority, startAt, dueAt, allDay, parentId), `edit`, `complete` (done, includeSubtasks),
   `delete` (removes the subtree), `move` (parentId, or null for top level), or
   `merge` (id into intoId: subtasks move over, notes are combined, the
   duplicate is deleted). Validation is the app's own; moves and merges into a
@@ -100,6 +102,6 @@ In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspac
 
 Edit `src/db/schema.ts`, then run `pnpm db:generate --name=describe_change`. Review and commit the new SQL and metadata. Apply explicitly with `pnpm db:migrate`, then verify with `pnpm db:check`. Never mutate the database during builds or requests, and do not change previously applied migrations.
 
-The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds the validated task color column and defaults existing tasks to Sage. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
+The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds task colors, `0003_task_date_ranges.sql` adds optional start dates, and `0004_task_priorities.sql` adds validated priorities while defaulting existing tasks to None. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
 
 See [the product plan](docs/PLAN.md), [deployment steps](docs/DEPLOYMENT.md), and [agent conventions](CLAUDE.md). Stop after each phase for review.

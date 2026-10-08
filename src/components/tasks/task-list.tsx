@@ -1,9 +1,9 @@
 "use client";
 import { type DragEvent, type FormEvent, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, CheckCircle2, ChevronDown, CornerDownRight, GripVertical, LoaderCircle, MoveRight } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CheckCircle2, ChevronDown, CornerDownRight, Flag, GripVertical, LoaderCircle, MoveRight } from "lucide-react";
 import { moveTask } from "@/app/tasks/actions";
-import { dueStatus, taskColorClasses, type Task } from "@/lib/todo-validation";
+import { dueStatus, taskColorClasses, taskPriorityClasses, taskPriorityNames, type Task } from "@/lib/todo-validation";
 import { Button } from "@/components/ui/button";
 import { CompleteTask } from "./task-controls";
 import { TaskDialog } from "./dialog";
@@ -17,6 +17,10 @@ export function DueBadge({ task }: { task: Task }) {
   const start = task.startAt ? new Date(task.startAt).toLocaleDateString(undefined, { ...options, ...(task.allDay ? { timeZone: "UTC" } : {}) }) : null;
   const text = start ? `${start} – ${end}` : end;
   return <span suppressHydrationWarning className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${status === "overdue" ? "bg-red-50 text-red-700" : status === "today" ? "bg-amber-50 text-amber-800" : "bg-muted text-muted-foreground"}`}><CalendarDays className="size-3.5 shrink-0" aria-hidden="true" /><span suppressHydrationWarning>{status === "overdue" ? "Overdue · " : status === "today" ? "Today · " : ""}{text}</span></span>;
+}
+export function PriorityBadge({ task }: { task: Task }) {
+  if (task.priority === "none") return null;
+  return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${taskPriorityClasses[task.priority]}`}><Flag className="size-3.5" aria-hidden="true" />{taskPriorityNames[task.priority]}</span>;
 }
 function moveOptions(task: Task, tasks: Task[]) {
   const byId = new Map(tasks.map(item => [item.id, item]));
@@ -86,7 +90,7 @@ export function TaskList({ tasks, allTasks = tasks, showParent = false, outParen
     {showParent && task.parentTitle && <p className="mb-2 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"><CornerDownRight className="size-3.5 shrink-0" /><span className="truncate">{task.parentTitle}</span></p>}
     <div className="-ml-2 -mr-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-start gap-1"><CompleteTask task={task} /><Link href={`/tasks/${task.id}`} draggable={false} className="grid min-h-11 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-lg py-2 text-lg font-medium leading-7 outline-none focus-visible:ring-2 focus-visible:ring-ring"><span data-task-title className={`min-w-0 break-words [overflow-wrap:anywhere] ${task.isDone ? "text-muted-foreground line-through" : ""}`}>{task.title}</span><ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" /></Link><button type="button" aria-label={`Move ${task.title}`} title="Drag or choose a new parent" onClick={() => setMovingTask(task)} className="flex size-11 shrink-0 cursor-grab items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><GripVertical className="size-4" aria-hidden="true" /></button><TaskEditor task={task} parentId={task.parentId} compact /></div>
     {task.description && <p className="mt-2 line-clamp-3 break-words text-sm leading-6 text-muted-foreground [overflow-wrap:anywhere]">{task.description}</p>}
-    <div className="mt-auto pt-5"><DueBadge task={task} />{task.childCount > 0 && <div className="mt-4"><div className="mb-2 flex justify-between text-xs text-muted-foreground"><span>{task.completedChildren} of {task.childCount} subtasks</span><span>{Math.round(task.completedChildren/task.childCount*100)}%</span></div><div role="progressbar" aria-label={`Subtask progress for ${task.title}`} aria-valuenow={task.completedChildren} aria-valuemin={0} aria-valuemax={task.childCount} className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary/75" style={{ width: `${task.completedChildren/task.childCount*100}%` }} /></div></div>}</div>
+    <div className="mt-auto pt-5"><div className="flex flex-wrap gap-2"><PriorityBadge task={task} /><DueBadge task={task} /></div>{task.childCount > 0 && <div className="mt-4"><div className="mb-2 flex justify-between text-xs text-muted-foreground"><span>{task.completedChildren} of {task.childCount} subtasks</span><span>{Math.round(task.completedChildren/task.childCount*100)}%</span></div><div role="progressbar" aria-label={`Subtask progress for ${task.title}`} aria-valuenow={task.completedChildren} aria-valuemin={0} aria-valuemax={task.childCount} className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary/75" style={{ width: `${task.completedChildren/task.childCount*100}%` }} /></div></div>}</div>
   </article>)}</div>
     {movingTask && <MoveTaskDialog task={movingTask} tasks={allTasks} onClose={() => setMovingTask(null)} />}
   </div>;
