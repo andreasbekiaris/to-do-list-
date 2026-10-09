@@ -121,6 +121,24 @@ test("completed tasks move into a collapsed history below open tasks and can be 
   await expect(page.getByText("Completed history", { exact: true })).toHaveCount(0);
 });
 
+test("every task page keeps completed subtasks in its own collapsed history", async ({ page }) => {
+  await add(page, "Parent project");
+  await page.getByRole("link", { name: "Parent project", exact: true }).click();
+  await add(page, "Open step", true);
+  await add(page, "Finished step", true);
+
+  await page.getByRole("checkbox", { name: "Complete Finished step", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Open step", exact: true })).toBeVisible();
+  await expect(page.getByText("Completed history", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Finished step", exact: true })).not.toBeVisible();
+
+  await page.getByText("Completed history", { exact: true }).click();
+  await expect(page.getByRole("link", { name: "Finished step", exact: true })).toBeVisible();
+  await page.getByRole("checkbox", { name: "Complete Finished step", exact: true }).click();
+  await expect(page.getByText("Completed history", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Finished step", exact: true })).toBeVisible();
+});
+
 test("tasks can be prioritized and sorted by closest date or highest priority", async ({ page }) => {
   await add(page, "Far urgent", false, "2099-12-31");
   await add(page, "Soon low", false, "2099-01-01");
