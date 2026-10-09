@@ -39,7 +39,7 @@ Stop after each phase and summarize for review. The owner reported successful pr
 ## Phase 4 — install and sync
 
 - PWA manifest and icons; Chrome/Edge install, Safari Add to Dock, mobile Add to Home Screen.
-- Refresh data on focus/visibility changes. No websockets or offline editing.
+- Refresh data on focus/visibility changes. No websockets. Offline edits queue in IndexedDB and replay through authenticated sync when connectivity returns.
 - Finish README local setup with `vercel env pull`, deployment, and device installation notes.
 
 ## Data model

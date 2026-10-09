@@ -21,9 +21,9 @@ Open https://to-do-list-ten-pi-88.vercel.app in your regular browser and sign in
 - **iPhone/iPad:** Safari → Share → Add to Home Screen.
 - **Android:** Chrome menu → Install app / Add to Home screen.
 
-Installation must be confirmed on your device. Browser menu wording can vary; the in-app browser inside Codex is not the place to install it. Use the same username/password everywhere; Safari's installed app may ask you to sign in again. Thread uses the same Neon database across devices and refreshes when you return to the window or regain connectivity. An open editor is left undisturbed.
+Installation must be confirmed on your device. Browser menu wording can vary; the in-app browser inside Codex is not the place to install it. Use the same username/password everywhere; Safari's installed app may ask you to sign in again. Thread uses the same Neon database across devices and refreshes when you return to the window or regain connectivity.
 
-Internet access is required to load and save tasks. There is no service-worker cache, offline editing, or background sync of private task data. Modern Chromium installation uses the manifest directly; Safari provides Add to Dock. Updates arrive from the website without downloading a separate executable.
+After one successful online visit, Thread keeps an offline workspace on that device. If the connection drops, the app switches to the locally saved list. You can add, edit, move, complete, restore, and delete tasks there; queued changes sync through your authenticated session as soon as the connection returns. Date windows are preserved, although date editing remains available in the connected workspace. If the same task is changed elsewhere before reconnecting, the queued offline edit is applied last. Private task data is stored in that browser's IndexedDB, so use **Sign out** on shared devices to clear the local copy. The service worker caches only the offline shell and static assets, not private server-rendered pages.
 
 ## Use your task dashboard
 

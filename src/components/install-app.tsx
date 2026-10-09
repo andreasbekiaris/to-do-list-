@@ -51,7 +51,7 @@ export function InstallApp() {
         <section><h3 className="font-semibold">Windows · Chrome or Edge</h3><p className="text-muted-foreground">Open this site in Chrome or Edge. Click the install icon in the address bar, or open the browser menu and choose Install Thread / Install this site as an app. Then pin Thread to your taskbar.</p></section>
         <section><h3 className="font-semibold">Mac · Safari</h3><p className="text-muted-foreground">On macOS Sonoma or later, open this site in Safari, choose File → Add to Dock, then click Add. Chrome’s install option works on Mac too.</p></section>
         <section><h3 className="font-semibold">Phone or tablet</h3><p className="text-muted-foreground">On iPhone or iPad, use Safari → Share → Add to Home Screen. On Android, open Chrome’s menu → Install app or Add to Home screen.</p></section>
-        <p className="border-t border-border pt-4 text-muted-foreground">An internet connection is needed to load and save tasks. Your list refreshes when you return to the app.</p>
+        <p className="border-t border-border pt-4 text-muted-foreground">Open Thread online once to prepare it for offline use. If your connection drops, you can keep adding, editing, completing, and deleting tasks; Thread syncs those changes automatically when you reconnect. Signing out clears the private offline copy on that device.</p>
       </div>
     </TaskDialog>}
   </>;

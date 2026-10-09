@@ -322,3 +322,40 @@ test("a task can span a date window and appears on every calendar day in it", as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `/tmp/thread-date-window-${testInfo.project.name}.png`, fullPage: true });
 });
+
+test("cached tasks remain editable offline and sync immediately after reconnecting", async ({ page, context }) => {
+  await add(page, "Available without internet");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>(resolve => navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true }));
+    }
+  });
+  await expect.poll(() => page.evaluate(async () => {
+    const opening = indexedDB.open("thread-offline", 1);
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      opening.onsuccess = () => resolve(opening.result);
+      opening.onerror = () => reject(opening.error);
+    });
+    const request = db.transaction("tasks", "readonly").objectStore("tasks").getAll();
+    const tasks = await new Promise<Array<{ title: string }>>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return tasks.some(task => task.title === "Available without internet");
+  })).toBe(true);
+
+  await context.setOffline(true);
+  await expect(page).toHaveURL(/\/offline$/);
+  await expect(page.getByRole("heading", { name: "Thread, even offline." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Available without internet" })).toBeVisible();
+  await page.getByLabel("New offline task").fill("Written on the train");
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Written on the train" })).toBeVisible();
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page).toHaveURL("http://127.0.0.1:3100/");
+  await expect(page.getByRole("link", { name: "Written on the train", exact: true })).toBeVisible();
+});

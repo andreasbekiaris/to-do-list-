@@ -26,7 +26,7 @@ Read `docs/PLAN.md` for the user's complete phase boundaries. The user confirmed
 - Date-only semantics for Phase 2: store the chosen calendar date at UTC midnight with `allDay=true`, display its UTC calendar components without zone shifting. Timed deadlines are instants displayed in the device's local zone.
 - `start_at` is optional and makes `due_at` the inclusive end of a task window. It requires an end, cannot follow it, and uses the same UTC-midnight semantics as an all-day due date. A range appears on every included calendar day; single-date tasks remain unchanged.
 - Calendar weeks begin Monday. Calendar views include dated tasks at every nesting level; undated tasks remain available in All tasks. Timed tasks are grouped by the device's local calendar day, while all-day tasks use their stored UTC date components.
-- No native apps, sharing, push notifications, offline writes, websockets, or realtime services.
+- No native apps, sharing, push notifications, websockets, or realtime services. Offline writes use the browser's IndexedDB outbox and the authenticated `/api/sync` endpoint.
 - Anthropic is Phase 3 only: Vercel AI SDK, `claude-haiku-4-5-20251001`, Zod output, max 500 input chars, explicit preview/accept, preserve Greek/English. `ANTHROPIC_API_KEY` belongs only in Vercel environment settings.
 
 ## Commands

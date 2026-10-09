@@ -38,6 +38,21 @@ export function createTodoRepository(execute: Execute) {
         RETURNING id`);
       return result.rows[0]?.id as string | undefined;
     },
+    async put(id: string, input: TodoInput, parentId: string | null) {
+      // Offline clients choose UUIDs before reconnecting. This upsert also applies
+      // the same cycle protection as move(), so queued edits cannot corrupt a tree.
+      const result = await execute(sql`WITH RECURSIVE subtree AS (
+        SELECT id FROM todos WHERE id=${id}::uuid
+        UNION ALL SELECT t.id FROM todos t JOIN subtree s ON t.parent_id=s.id
+      ) INSERT INTO todos (id, title, description, color, priority, start_at, due_at, all_day, parent_id)
+        SELECT ${id}::uuid, ${input.title}, ${input.description}, ${input.color}, ${input.priority}, ${input.startAt}::timestamptz, ${input.dueAt}::timestamptz, ${input.allDay}, ${parentId}::uuid
+        WHERE ${parentId}::uuid IS NULL OR (EXISTS (SELECT 1 FROM todos WHERE id=${parentId}::uuid)
+          AND ${parentId}::uuid NOT IN (SELECT id FROM subtree))
+        ON CONFLICT (id) DO UPDATE SET title=excluded.title, description=excluded.description, color=excluded.color,
+          priority=excluded.priority, start_at=excluded.start_at, due_at=excluded.due_at, all_day=excluded.all_day,
+          parent_id=excluded.parent_id, updated_at=now() RETURNING id`);
+      return result.rows.length > 0;
+    },
     async edit(id: string, input: TodoInput) {
       const result = await execute(sql`UPDATE todos SET title=${input.title}, description=${input.description}, color=${input.color}, priority=${input.priority},
         start_at=${input.startAt}::timestamptz, due_at=${input.dueAt}::timestamptz, all_day=${input.allDay}, updated_at=now() WHERE id=${id}::uuid RETURNING id`);
@@ -85,6 +100,10 @@ export function createTodoRepository(execute: Execute) {
       changed AS (DELETE FROM todos WHERE id=${id}::uuid AND (SELECT ids=${JSON.stringify([...expectedIds].sort())}::jsonb FROM children) RETURNING id)
       SELECT EXISTS(SELECT 1 FROM todos WHERE id=${id}::uuid) AS found, EXISTS(SELECT 1 FROM changed) AS changed, ids FROM children`);
       return mutationSchema.parse(result.rows[0]);
+    },
+    async removeUnchecked(id: string) {
+      const result = await execute(sql`DELETE FROM todos WHERE id=${id}::uuid RETURNING id`);
+      return result.rows.length > 0;
     },
   };
 }

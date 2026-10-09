@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/geist";
 import "./globals.css";
+import { OfflineSupport } from "@/components/offline-support";
 
 export const metadata: Metadata = {
   title: { default: "Thread — Your personal space", template: "%s · Thread" },
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('thread-theme');if(['sage','lavender','sunset','midnight'].includes(t))document.documentElement.dataset.theme=t}catch(e){}` }} /></head>
       <body className="min-h-full">
         <a href="#main-content" className="sr-only z-50 rounded-lg bg-primary p-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
+        <OfflineSupport />
         {children}
       </body>
     </html>

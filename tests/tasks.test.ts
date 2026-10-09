@@ -72,6 +72,20 @@ test("tasks can move under another task or back out without creating cycles", as
   assert.equal(await repository.move(child, child), false);
   assert.equal((await repository.detail(root))?.parentId, null);
 });
+test("offline upserts accept client UUIDs, update tasks, reject cycles, and delete subtrees", async () => {
+  const root = "00000000-0000-4000-8000-000000000001";
+  const child = "00000000-0000-4000-8000-000000000002";
+  assert.equal(await repository.put(root, { ...input, title: "Offline root" }, null), true);
+  assert.equal(await repository.put(child, { ...input, title: "Offline child" }, root), true);
+  assert.equal((await repository.detail(child))?.parentId, root);
+  assert.equal(await repository.put(child, { ...input, title: "Edited offline", priority: "urgent" }, root), true);
+  assert.equal((await repository.detail(child))?.title, "Edited offline");
+  assert.equal((await repository.detail(child))?.priority, "urgent");
+  assert.equal(await repository.put(root, { ...input, title: "Invalid move" }, child), false);
+  assert.equal((await repository.detail(root))?.parentId, null);
+  assert.equal(await repository.removeUnchecked(root), true);
+  assert.equal(await repository.detail(child), null);
+});
 test("date-only deadlines stay on the calendar date; timed deadlines and done filters differ", () => {
   const now = new Date(2026, 9, 3, 12);
   const task: Task = { ...input, id: "unused", parentId: null, isDone: false, completedAt: null, childCount: 0, completedChildren: 0, parentTitle: null, allDay: true, dueAt: "2026-10-03T00:00:00.000Z" };
