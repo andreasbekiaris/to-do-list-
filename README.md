@@ -2,7 +2,7 @@
 
 A private, single-user nested to-do app for desktop and phone. One Next.js app hosted on Vercel, installable in its own window on supported desktop and mobile browsers.
 
-Username/password accounts, nested tasks, and desktop installation are implemented. At the user's request, installation was brought forward ahead of AI writing, which remains deferred.
+Username/password accounts, nested tasks, reference lists, and desktop installation are implemented. At the user's request, installation was brought forward ahead of AI writing, which remains deferred.
 
 ## Colors and themes
 
@@ -23,7 +23,7 @@ Open https://to-do-list-ten-pi-88.vercel.app in your regular browser and sign in
 
 Installation must be confirmed on your device. Browser menu wording can vary; the in-app browser inside Codex is not the place to install it. Use the same username/password everywhere; Safari's installed app may ask you to sign in again. Thread uses the same Neon database across devices and refreshes when you return to the window or regain connectivity.
 
-After one successful online visit, Thread keeps an offline workspace on that device. If the connection drops, the app switches to the locally saved list. You can add, edit, move, complete, restore, and delete tasks there; queued changes sync through your authenticated session as soon as the connection returns. Date windows are preserved, although date editing remains available in the connected workspace. If the same task is changed elsewhere before reconnecting, the queued offline edit is applied last. Private task data is stored in that browser's IndexedDB, so use **Sign out** on shared devices to clear the local copy. The service worker caches only the offline shell and static assets, not private server-rendered pages.
+After one successful online visit, Thread keeps an offline workspace on that device. If the connection drops, the app switches to the locally saved list. You can add, edit, move, complete, restore, and delete tasks there; queued changes sync through your authenticated session as soon as the connection returns. Date windows are preserved, although date editing remains available in the connected workspace. Reference lists from task pages you opened online are cached for offline reading; reconnect to edit them. If the same task is changed elsewhere before reconnecting, the queued offline edit is applied last. Private task and list data is stored in that browser's IndexedDB, so use **Sign out** on shared devices to clear the local copy. The service worker caches only the offline shell and static assets, not private server-rendered pages.
 
 ## Use your task dashboard
 
@@ -31,6 +31,7 @@ After one successful online visit, Thread keeps an offline workspace on that dev
 - Add an optional **Start date** with the due date to make an inclusive task window, such as October 5–10. The task appears on every included Day, Week, and Month calendar date.
 - Choose **Low**, **Medium**, **High**, or **Urgent** priority, or leave it as **None**. The priority badge is saved with the task on every device.
 - Open a task to edit it or **Add subtask**. Subtasks can contain further subtasks; breadcrumbs take you back through the tree.
+- Use **Add list** on any task page for reference material that is not work to complete. Each named list can hold ordered items with an optional web link and note—for example, a **Shoes** task with a **Pairs I like** list. Use **Add & another** to enter several items quickly, and the arrow controls to change their order. List entries deliberately have no checkbox, deadline, priority, or completion history.
 - **All** shows root tasks. Today, Upcoming, Overdue, Done, and search can surface tasks from any depth. Today includes deadlines earlier today; those also appear under Overdue until complete.
 - Use **Sort tasks** to keep the default order, put the closest dated task first, or put the highest-priority task first. Undated tasks appear last when sorting by date.
 - Use **All tasks**, **Day**, **Week**, and **Month** above the dashboard to switch between the full list and calendar organization. Calendar views include dated tasks from every nesting level. Move backward or forward, jump to Today, or choose a date directly. Tasks without deadlines stay in All tasks.
@@ -39,7 +40,7 @@ After one successful online visit, Thread keeps an offline workspace on that dev
 - Check a task to complete it. Completed tasks move into the collapsed history below the open list and retain their completion date; every task page has the same history for its completed subtasks. Open a history to review or restore one. For unfinished descendants, choose **Complete all** or **Only this task**. Reopening a task affects only that task. Card progress counts direct children.
 - Deleting a task with descendants requires confirmation of their total and removes the whole subtree. Changes persist in Neon and are available on your other devices when you return to the app, navigate, or refresh.
 
-This phase uses the existing `todos` table with additive migrations for colors, date windows, and priorities. Server actions and task pages require the owner’s authenticated session. Completion and deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
+This phase uses the existing `todos` table plus additive `task_lists` and `task_list_items` tables. Server actions and task pages require the owner’s authenticated session. Deleting a task cascades to its lists and list items. Completion and task deletion validate the current descendant set in one SQL statement, so a stale confirmation cannot silently include new subtasks.
 
 ## Assistant access (Jarvis)
 
@@ -102,6 +103,6 @@ In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspac
 
 Edit `src/db/schema.ts`, then run `pnpm db:generate --name=describe_change`. Review and commit the new SQL and metadata. Apply explicitly with `pnpm db:migrate`, then verify with `pnpm db:check`. Never mutate the database during builds or requests, and do not change previously applied migrations.
 
-The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds task colors, `0003_task_date_ranges.sql` adds optional start dates, and `0004_task_priorities.sql` adds validated priorities while defaulting existing tasks to None. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
+The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds task colors, `0003_task_date_ranges.sql` adds optional start dates, `0004_task_priorities.sql` adds validated priorities while defaulting existing tasks to None, and `0005_task_reference_lists.sql` adds named non-task lists and their ordered items. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
 
 See [the product plan](docs/PLAN.md), [deployment steps](docs/DEPLOYMENT.md), and [agent conventions](CLAUDE.md). Stop after each phase for review.

@@ -2,7 +2,7 @@
 
 Thread is a single-user nested to-do app used from a Mac, Windows PC, and phone. One Next.js app hosted on Vercel becomes the installable desktop/mobile app via PWA support. No native clients.
 
-Stop after each phase and summarize for review. The owner reported successful production registration and login. Phase 2 task features are deployed. The user then requested desktop installation, appearance customization, Day/Week/Month calendar organization, drag-and-drop reparenting with the ability to move tasks back out, optional multi-day task windows, completed-task history, and task priority/sorting, authorizing those additions ahead of Phase 3. AI writing remains deferred.
+Stop after each phase and summarize for review. The owner reported successful production registration and login. Phase 2 task features are deployed. The user then requested desktop installation, appearance customization, Day/Week/Month calendar organization, drag-and-drop reparenting with the ability to move tasks back out, optional multi-day task windows, completed-task history, task priority/sorting, and non-task reference lists inside tasks, authorizing those additions ahead of Phase 3. AI writing remains deferred.
 
 ## Phase 1 — foundation
 
@@ -23,6 +23,7 @@ Stop after each phase and summarize for review. The owner reported successful pr
 - Due badges are red when overdue, amber today. Timed deadlines display in the device timezone. Calendar-only dates must not shift across devices.
 - Responsive grid on desktop, one column on mobile, at least 44px tap targets.
 - Acceptance: create a three-level tree on desktop and see the persisted tree on a phone.
+- A task can contain multiple named reference lists. Their ordered items have a title, optional HTTP(S) link, and optional note, but no completion state, scheduling, or priority. Deleting the task cascades to this reference material.
 
 ## Phase 3 — AI writing
 
@@ -60,3 +61,5 @@ Stop after each phase and summarize for review. The owner reported successful pr
 | `updated_at` | Timestamptz, defaults to now; Drizzle updates on mutation |
 
 `owner_accounts` stores the owner UUID, a unique normalized username, a salted password hash, creation time, and a unique/check-constrained singleton flag. `auth_attempts` stores two persistent rate-limit buckets. Auth.js uses encrypted JWT sessions and checks the stored owner UUID on each session read; all private data entry points require that session. No multi-user feature is introduced. For date-only values, UTC midnight encodes a calendar date and display uses UTC date components; timed values are normal instants converted to the device timezone.
+
+`task_lists` belongs to a `todos` row and stores a nonblank name plus stable order. `task_list_items` belongs to a list and stores a nonblank title, optional URL and note, and stable order. Both foreign keys use `ON DELETE CASCADE`. Lists and their items remain a separate content type so task progress and completion history only measure actionable work.

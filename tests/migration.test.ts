@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { todos } from "../src/db/schema";
+import { taskListItems, taskLists, todos } from "../src/db/schema";
 
 test("the migration supports a nested tree, constraints, timestamps, and cascade deletion", async (t) => {
   const client = new PGlite();
@@ -16,6 +16,8 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
   const [parent] = await db.insert(todos).values({ title: "Phase 4" }).returning();
   const [child] = await db.insert(todos).values({ title: "Controllers", parentId: parent.id }).returning();
   const [leaf] = await db.insert(todos).values({ title: "GET vessels", parentId: child.id, dueAt: new Date("2026-10-05T12:30:00+03:00") }).returning();
+  const [referenceList] = await db.insert(taskLists).values({ title: "API options", todoId: leaf.id }).returning();
+  await db.insert(taskListItems).values({ title: "REST", listId: referenceList.id, url: "https://example.com/rest", note: "Simple first option" });
   assert.equal(parent.parentId, null);
   assert.equal(parent.isDone, false);
   assert.equal(parent.color, "sage");
@@ -41,6 +43,8 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
   await assert.rejects(db.insert(todos).values({ title: "Reversed range", startAt: new Date("2026-10-10T00:00:00Z"), dueAt: new Date("2026-10-05T00:00:00Z") }));
   await assert.rejects(client.query("INSERT INTO todos (title, color) VALUES ('Bad color', 'neon')"));
   await assert.rejects(client.query("INSERT INTO todos (title, priority) VALUES ('Bad priority', 'critical')"));
+  await assert.rejects(db.insert(taskLists).values({ title: " ", todoId: leaf.id }));
+  await assert.rejects(db.insert(taskListItems).values({ title: " ", listId: referenceList.id }));
 
   await db.update(todos).set({ isDone: true, completedAt: new Date() }).where(eq(todos.id, leaf.id));
   const [done] = await db.select().from(todos).where(eq(todos.id, leaf.id));
@@ -49,4 +53,6 @@ test("the migration supports a nested tree, constraints, timestamps, and cascade
 
   await db.delete(todos).where(eq(todos.id, parent.id));
   assert.equal((await db.select().from(todos)).length, 0);
+  assert.equal((await db.select().from(taskLists)).length, 0);
+  assert.equal((await db.select().from(taskListItems)).length, 0);
 });

@@ -3,12 +3,15 @@ import { after, before, beforeEach, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { createListRepository } from "../src/db/list-repository";
 import { createTodoRepository } from "../src/db/todo-repository";
+import { taskListInputSchema, taskListItemInputSchema } from "../src/lib/list-validation";
 import { dueStatus, matchesFilter, sortTasks, todoInputSchema, type Task } from "../src/lib/todo-validation";
 import { addDays, groupTasksByDate, monthKeys, moveMonth, startOfWeek, taskDateKey, weekKeys } from "../src/lib/calendar";
 const client = new PGlite();
 const db = drizzle(client);
 const repository = createTodoRepository(query => db.execute(query));
+const lists = createListRepository(query => db.execute(query));
 const input = { title: "A task", description: "Notes", color: "sage" as const, priority: "none" as const, startAt: null, dueAt: null, allDay: false };
 before(async () => { await migrate(db, { migrationsFolder: "drizzle" }); });
 beforeEach(async () => { await client.exec("TRUNCATE todos CASCADE"); });
@@ -85,6 +88,27 @@ test("offline upserts accept client UUIDs, update tasks, reject cycles, and dele
   assert.equal((await repository.detail(root))?.parentId, null);
   assert.equal(await repository.removeUnchecked(root), true);
   assert.equal(await repository.detail(child), null);
+});
+test("named reference lists keep linked items separate from tasks and preserve manual order", async () => {
+  const taskId = (await repository.create({ ...input, title: "Shoes to buy" }, null))!;
+  const listId = (await lists.createList({ title: "Shortlist" }, taskId))!;
+  assert.equal(await lists.createList({ title: "Missing" }, "00000000-0000-4000-8000-000000000099"), undefined);
+  const first = (await lists.createItem({ title: "Blue trainers", url: "https://example.com/blue", note: "Try size 42" }, listId))!;
+  const second = (await lists.createItem({ title: "Brown boots", url: "", note: "" }, listId))!;
+  assert.deepEqual((await lists.listForTask(taskId))[0].items.map(item => item.title), ["Blue trainers", "Brown boots"]);
+  assert.equal(await lists.moveItem(second, "up"), true);
+  assert.deepEqual((await lists.listForTask(taskId))[0].items.map(item => item.id), [second, first]);
+  assert.equal(await lists.moveItem(second, "up"), false);
+  assert.equal(await lists.editItem(first, { title: "Blue running shoes", url: "https://example.com/new", note: "Now in size 42" }), true);
+  assert.equal((await lists.listForTask(taskId))[0].items[1].note, "Now in size 42");
+  assert.equal(await repository.removeUnchecked(taskId), true);
+  assert.deepEqual(await lists.listForTask(taskId), []);
+});
+test("reference list validation requires names and safe web links", () => {
+  assert.equal(taskListInputSchema.safeParse({ title: "  " }).success, false);
+  assert.equal(taskListItemInputSchema.safeParse({ title: "A shoe", url: "https://example.com/shoe", note: "" }).success, true);
+  assert.equal(taskListItemInputSchema.safeParse({ title: "A shoe", url: "javascript:alert(1)", note: "" }).success, false);
+  assert.equal(taskListItemInputSchema.safeParse({ title: "", url: "", note: "" }).success, false);
 });
 test("date-only deadlines stay on the calendar date; timed deadlines and done filters differ", () => {
   const now = new Date(2026, 9, 3, 12);

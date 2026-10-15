@@ -53,6 +53,51 @@ export const todos = pgTable(
 export type Todo = typeof todos.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
 
+export const taskLists = pgTable(
+  "task_lists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    todoId: uuid("todo_id").notNull().references(() => todos.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 200 }).notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("task_lists_todo_id_idx").on(table.todoId),
+    check("task_lists_title_not_blank", sql`length(trim(${table.title})) > 0`),
+    check("task_lists_sort_order_nonnegative", sql`${table.sortOrder} >= 0`),
+  ],
+);
+
+export const taskListItems = pgTable(
+  "task_list_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listId: uuid("list_id").notNull().references(() => taskLists.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 500 }).notNull(),
+    url: text("url").notNull().default(""),
+    note: text("note").notNull().default(""),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("task_list_items_list_id_idx").on(table.listId),
+    check("task_list_items_title_not_blank", sql`length(trim(${table.title})) > 0`),
+    check("task_list_items_sort_order_nonnegative", sql`${table.sortOrder} >= 0`),
+  ],
+);
+
+export type TaskList = typeof taskLists.$inferSelect;
+export type TaskListItem = typeof taskListItems.$inferSelect;
+
 export const ownerAccounts = pgTable("owner_accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   singleton: boolean("singleton").notNull().default(true).unique(),

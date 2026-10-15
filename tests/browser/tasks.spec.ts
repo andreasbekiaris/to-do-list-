@@ -72,6 +72,55 @@ test("three-level tree persists across devices, edits notes and dates, completes
   await expect(page.getByRole("link", { name: "Home project", exact: true })).toHaveCount(0);
   expect((await page.goto(leafUrl))?.status()).toBe(404);
 });
+test("tasks hold named reference lists with linked, reorderable items instead of extra to-dos", async ({ page }, testInfo) => {
+  await add(page, "To buy");
+  await page.getByRole("link", { name: "To buy", exact: true }).click();
+  await add(page, "Shoes", true);
+  await page.getByRole("link", { name: "Shoes", exact: true }).click();
+
+  await page.getByRole("button", { name: "Add list", exact: true }).click();
+  const listDialog = page.getByRole("dialog", { name: "Add a list" });
+  await listDialog.getByLabel("List name").fill("Pairs I like");
+  await listDialog.getByRole("button", { name: "Add list", exact: true }).click();
+  await expect(listDialog).not.toBeVisible();
+
+  const list = page.locator('article[data-list-title="Pairs I like"]');
+  await expect(list).toBeVisible();
+  await list.getByRole("button", { name: "Add item", exact: true }).click();
+  const itemDialog = page.getByRole("dialog", { name: "Add a list item" });
+  await itemDialog.getByLabel("Name", { exact: true }).fill("Blue trainers");
+  await itemDialog.getByLabel("Link").fill("https://example.com/blue-trainers");
+  await itemDialog.getByLabel("Note").fill("Size 42 · compare the navy color");
+  await itemDialog.getByRole("button", { name: "Add & another", exact: true }).click();
+  await expect(itemDialog.getByRole("status")).toContainText("Item added");
+  await itemDialog.getByLabel("Name", { exact: true }).fill("Brown boots");
+  await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await expect(itemDialog).not.toBeVisible();
+
+  const names = () => list.locator("[data-list-item-id] > div > p:first-child").allTextContents();
+  await expect.poll(names).toEqual(["Blue trainers", "Brown boots"]);
+  await list.getByRole("button", { name: "Move Brown boots up", exact: true }).click();
+  await expect.poll(names).toEqual(["Brown boots", "Blue trainers"]);
+  await expect(list.getByRole("link", { name: /example\.com for Blue trainers/ })).toHaveAttribute("href", "https://example.com/blue-trainers");
+  await expect(list.getByText("Size 42 · compare the navy color", { exact: true })).toBeVisible();
+  await expect(list.getByRole("checkbox")).toHaveCount(0);
+  await page.reload();
+  await expect.poll(names).toEqual(["Brown boots", "Blue trainers"]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `/tmp/thread-reference-lists-${testInfo.project.name}.png`, fullPage: true });
+
+  await list.getByRole("button", { name: "Delete Brown boots", exact: true }).click();
+  await page.getByRole("button", { name: "Delete item", exact: true }).click();
+  await expect(list.getByText("Brown boots", { exact: true })).toHaveCount(0);
+  await list.getByRole("button", { name: "Rename Pairs I like", exact: true }).click();
+  await page.getByRole("dialog", { name: "Rename list" }).getByLabel("List name").fill("Final shoe shortlist");
+  await page.getByRole("button", { name: "Save name", exact: true }).click();
+  const renamed = page.locator('article[data-list-title="Final shoe shortlist"]');
+  await expect(renamed).toBeVisible();
+  await renamed.getByRole("button", { name: "Delete Final shoe shortlist", exact: true }).click();
+  await page.getByRole("button", { name: "Delete list", exact: true }).click();
+  await expect(renamed).toHaveCount(0);
+});
 test("deadline filters, search, timed editing and optimistic failure rollback", async ({ page }, testInfo) => {
   await add(page, "Overdue errand", false, "2020-01-01");
   await add(page, "Future trip", false, "2099-01-01");
@@ -332,7 +381,7 @@ test("cached tasks remain editable offline and sync immediately after reconnecti
     }
   });
   await expect.poll(() => page.evaluate(async () => {
-    const opening = indexedDB.open("thread-offline", 1);
+    const opening = indexedDB.open("thread-offline", 2);
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       opening.onsuccess = () => resolve(opening.result);
       opening.onerror = () => reject(opening.error);

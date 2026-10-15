@@ -1,8 +1,10 @@
 import type { Task, TodoInput } from "@/lib/todo-validation";
+import type { ReferenceList } from "@/lib/list-validation";
 
 const DB_NAME = "thread-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const TASKS = "tasks";
+const LISTS = "lists";
 const OUTBOX = "outbox";
 
 export type OfflineOperation =
@@ -33,6 +35,7 @@ export function openOfflineDb() {
     opening.onupgradeneeded = () => {
       const db = opening.result;
       if (!db.objectStoreNames.contains(TASKS)) db.createObjectStore(TASKS, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(LISTS)) db.createObjectStore(LISTS, { keyPath: "id" });
       if (!db.objectStoreNames.contains(OUTBOX)) db.createObjectStore(OUTBOX, { keyPath: "seq", autoIncrement: true });
     };
     opening.onsuccess = () => resolve(opening.result);
@@ -48,6 +51,14 @@ export async function getOfflineTasks() {
   return tasks;
 }
 
+export async function getOfflineLists() {
+  const db = await openOfflineDb();
+  const transaction = db.transaction(LISTS, "readonly");
+  const lists = await request(transaction.objectStore(LISTS).getAll() as IDBRequest<ReferenceList[]>);
+  db.close();
+  return lists;
+}
+
 export async function cacheServerTasks(tasks: Task[]) {
   const db = await openOfflineDb();
   const transaction = db.transaction([TASKS, OUTBOX], "readwrite");
@@ -56,6 +67,20 @@ export async function cacheServerTasks(tasks: Task[]) {
     const store = transaction.objectStore(TASKS);
     store.clear();
     for (const task of tasks) store.put(task);
+  }
+  await done(transaction);
+  db.close();
+}
+
+export async function cacheServerLists(taskId: string, lists: ReferenceList[]) {
+  const db = await openOfflineDb();
+  const transaction = db.transaction([LISTS, OUTBOX], "readwrite");
+  const queued = await request(transaction.objectStore(OUTBOX).count());
+  if (!queued) {
+    const store = transaction.objectStore(LISTS);
+    const saved = await request(store.getAll() as IDBRequest<ReferenceList[]>);
+    for (const list of saved) if (list.taskId === taskId) store.delete(list.id);
+    for (const list of lists) store.put(list);
   }
   await done(transaction);
   db.close();

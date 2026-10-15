@@ -8,9 +8,11 @@ async function main() {
   if (!url) throw new Error("missing database configuration");
   const sql = neon(url);
   await sql`SELECT id, parent_id, due_at, all_day FROM todos LIMIT 1`;
+  await sql`SELECT id, todo_id FROM task_lists LIMIT 1`;
+  await sql`SELECT id, list_id FROM task_list_items LIMIT 1`;
   await sql`SELECT id FROM owner_accounts LIMIT 1`;
   await sql`SELECT bucket FROM auth_attempts LIMIT 1`;
-  console.log("Database connected; task and account migrations are available.");
+  console.log("Database connected; task, list, and account migrations are available.");
 }
 
 main().catch(() => {
