@@ -50,13 +50,20 @@ every request must send it as `Authorization: Bearer <token>`. Treat it like a
 password: anyone with it can change your tasks. Remove it in Vercel to switch
 the API off.
 
-- `GET /api/agent/tasks` lists every task (any depth).
+- `GET /api/agent/tasks` lists every task (any depth) and every reference
+  list with its items.
 - `POST /api/agent/tasks` with one operation: `add` (title, description,
   color, priority, startAt, dueAt, allDay, parentId), `edit`, `complete` (done, includeSubtasks),
   `delete` (removes the subtree), `move` (parentId, or null for top level), or
   `merge` (id into intoId: subtasks move over, notes are combined, the
   duplicate is deleted). Validation is the app's own; moves and merges into a
   task's own subtree are refused.
+- Reference lists use the same endpoint: `addList` (taskId, title, optional
+  items), `editList` (title), `deleteList` (removes its items), `moveList`
+  (to another taskId and/or a 0-based position), `addItem` (listId, title,
+  url, note, optional position), `editItem` (any of title, url, note),
+  `deleteItem`, and `moveItem` (to another listId and/or a position; omit the
+  position for the end).
 
 ## Create your account
 

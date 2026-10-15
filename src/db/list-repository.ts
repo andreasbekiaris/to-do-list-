@@ -20,20 +20,33 @@ const itemSchema = z.object({
 });
 
 export function createListRepository(execute: Execute) {
+  async function load(taskId: string | null): Promise<ReferenceList[]> {
+    const lists = taskId === null ? sql`TRUE` : sql`todo_id=${taskId}::uuid`;
+    const items = taskId === null ? sql`TRUE` : sql`l.todo_id=${taskId}::uuid`;
+    const [listResult, itemResult] = await Promise.all([
+      execute(sql`SELECT id, todo_id AS "taskId", title, sort_order AS "sortOrder"
+        FROM task_lists WHERE ${lists} ORDER BY sort_order, created_at, id`),
+      execute(sql`SELECT i.id, i.list_id AS "listId", i.title, i.url, i.note, i.sort_order AS "sortOrder"
+        FROM task_list_items i JOIN task_lists l ON l.id=i.list_id WHERE ${items}
+        ORDER BY l.sort_order, l.created_at, l.id, i.sort_order, i.created_at, i.id`),
+    ]);
+    const parsed = itemResult.rows.map(row => itemSchema.parse(row));
+    return listResult.rows.map(row => {
+      const list = listSchema.parse(row);
+      return { ...list, items: parsed.filter(item => item.listId === list.id) };
+    });
+  }
   return {
-    async listForTask(taskId: string): Promise<ReferenceList[]> {
-      const [listResult, itemResult] = await Promise.all([
-        execute(sql`SELECT id, todo_id AS "taskId", title, sort_order AS "sortOrder"
-          FROM task_lists WHERE todo_id=${taskId}::uuid ORDER BY sort_order, created_at, id`),
-        execute(sql`SELECT i.id, i.list_id AS "listId", i.title, i.url, i.note, i.sort_order AS "sortOrder"
-          FROM task_list_items i JOIN task_lists l ON l.id=i.list_id WHERE l.todo_id=${taskId}::uuid
-          ORDER BY l.sort_order, l.created_at, l.id, i.sort_order, i.created_at, i.id`),
-      ]);
-      const items = itemResult.rows.map(row => itemSchema.parse(row));
-      return listResult.rows.map(row => {
-        const list = listSchema.parse(row);
-        return { ...list, items: items.filter(item => item.listId === list.id) };
-      });
+    listForTask: (taskId: string) => load(taskId),
+    /** Every task's lists (the assistant API). */
+    all: () => load(null),
+    async findList(id: string) {
+      const result = await execute(sql`SELECT id, todo_id AS "taskId", title, sort_order AS "sortOrder" FROM task_lists WHERE id=${id}::uuid`);
+      return result.rows[0] ? listSchema.parse(result.rows[0]) : null;
+    },
+    async findItem(id: string) {
+      const result = await execute(sql`SELECT id, list_id AS "listId", title, url, note, sort_order AS "sortOrder" FROM task_list_items WHERE id=${id}::uuid`);
+      return result.rows[0] ? itemSchema.parse(result.rows[0]) : null;
     },
     async createList(input: TaskListInput, taskId: string) {
       const result = await execute(sql`INSERT INTO task_lists (todo_id, title, sort_order)
@@ -74,6 +87,38 @@ export function createListRepository(execute: Execute) {
       changed AS (UPDATE task_list_items i SET sort_order=CASE WHEN i.id=t.id THEN n.position ELSE t.position END, updated_at=now()
         FROM target t, neighbor n WHERE i.id=t.id OR i.id=n.id RETURNING i.id)
       SELECT EXISTS(SELECT 1 FROM changed) AS changed`);
+      return z.object({ changed: z.boolean() }).parse(result.rows[0]).changed;
+    },
+    /** Puts a list on a task (its own or another) at a 0-based position; null = last. False if either is missing. */
+    async placeList(id: string, taskId: string, position: number | null) {
+      const result = await execute(sql`WITH moving AS (
+        SELECT id FROM task_lists WHERE id=${id}::uuid AND EXISTS (SELECT 1 FROM todos WHERE id=${taskId}::uuid)
+      ), siblings AS (
+        SELECT l.id, row_number() OVER (ORDER BY l.sort_order, l.created_at, l.id)::int-1 AS position
+        FROM task_lists l WHERE l.todo_id=${taskId}::uuid AND l.id<>${id}::uuid AND EXISTS (SELECT 1 FROM moving)
+      ), slot AS (SELECT least(greatest(coalesce(${position}::int, 2147483647), 0), (SELECT count(*) FROM siblings))::int AS position),
+      placed AS (
+        SELECT s.id, CASE WHEN s.position>=slot.position THEN s.position+1 ELSE s.position END AS position FROM siblings s, slot
+        UNION ALL SELECT m.id, slot.position FROM moving m, slot
+      ), changed AS (UPDATE task_lists l SET todo_id=${taskId}::uuid, sort_order=p.position, updated_at=now()
+        FROM placed p WHERE l.id=p.id RETURNING l.id)
+      SELECT EXISTS(SELECT 1 FROM changed WHERE id=${id}::uuid) AS changed`);
+      return z.object({ changed: z.boolean() }).parse(result.rows[0]).changed;
+    },
+    /** Puts an item in a list (its own or another) at a 0-based position; null = last. False if either is missing. */
+    async placeItem(id: string, listId: string, position: number | null) {
+      const result = await execute(sql`WITH moving AS (
+        SELECT id FROM task_list_items WHERE id=${id}::uuid AND EXISTS (SELECT 1 FROM task_lists WHERE id=${listId}::uuid)
+      ), siblings AS (
+        SELECT i.id, row_number() OVER (ORDER BY i.sort_order, i.created_at, i.id)::int-1 AS position
+        FROM task_list_items i WHERE i.list_id=${listId}::uuid AND i.id<>${id}::uuid AND EXISTS (SELECT 1 FROM moving)
+      ), slot AS (SELECT least(greatest(coalesce(${position}::int, 2147483647), 0), (SELECT count(*) FROM siblings))::int AS position),
+      placed AS (
+        SELECT s.id, CASE WHEN s.position>=slot.position THEN s.position+1 ELSE s.position END AS position FROM siblings s, slot
+        UNION ALL SELECT m.id, slot.position FROM moving m, slot
+      ), changed AS (UPDATE task_list_items i SET list_id=${listId}::uuid, sort_order=p.position, updated_at=now()
+        FROM placed p WHERE i.id=p.id RETURNING i.id)
+      SELECT EXISTS(SELECT 1 FROM changed WHERE id=${id}::uuid) AS changed`);
       return z.object({ changed: z.boolean() }).parse(result.rows[0]).changed;
     },
   };

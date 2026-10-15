@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
+import { createListRepository } from "@/db/list-repository";
 import { createTodoRepository } from "@/db/todo-repository";
 import { agentToken, listTasks, runOperation, tokenMatches, type AgentResult } from "@/lib/agent-api";
 
@@ -18,15 +19,16 @@ async function guarded(request: Request, handle: () => Promise<AgentResult>) {
   }
 }
 const repository = () => createTodoRepository(query => getDb().execute(query));
+const lists = () => createListRepository(query => getDb().execute(query));
 
 export async function GET(request: Request) {
-  return guarded(request, () => listTasks(repository()));
+  return guarded(request, () => listTasks(repository(), lists()));
 }
 
 export async function POST(request: Request) {
   return guarded(request, async () => {
     const body: unknown = await request.json().catch(() => null);
-    const result = await runOperation(repository(), body);
+    const result = await runOperation(repository(), lists(), body);
     if (result.status === 200) {
       revalidatePath("/");
       revalidatePath("/tasks/[id]", "page");
