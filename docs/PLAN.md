@@ -8,9 +8,9 @@ Stop after each phase and summarize for review. The owner reported successful pr
 
 - Next.js App Router, strict TypeScript, pnpm, Tailwind and shadcn/ui primitives.
 - Neon Postgres with Drizzle and the Neon HTTP driver; first SQL migration.
-- Auth.js Credentials with username/password login and a one-time owner account creation flow. This replaces GitHub OAuth at the user's request.
+- Auth.js Credentials with username/password login, a one-time owner account creation flow, and setup-code password recovery. This replaces GitHub OAuth at the user's request.
 - A protected workspace page, a public login page, Vercel configuration, and agent conventions.
-- Acceptance: deploy to Vercel, create the owner account using the private setup code, log in with its username/password, reject incorrect credentials, and prevent creation of a second account.
+- Acceptance: deploy to Vercel, create the owner account using the private setup code, log in with its username/password, reset a forgotten password with that setup code, reject incorrect credentials, and prevent creation of a second account.
 
 ## Phase 2 — tasks
 
@@ -60,6 +60,6 @@ Stop after each phase and summarize for review. The owner reported successful pr
 | `created_at` | Timestamptz, defaults to now |
 | `updated_at` | Timestamptz, defaults to now; Drizzle updates on mutation |
 
-`owner_accounts` stores the owner UUID, a unique normalized username, a salted password hash, creation time, and a unique/check-constrained singleton flag. `auth_attempts` stores two persistent rate-limit buckets. Auth.js uses encrypted JWT sessions and checks the stored owner UUID on each session read; all private data entry points require that session. No multi-user feature is introduced. For date-only values, UTC midnight encodes a calendar date and display uses UTC date components; timed values are normal instants converted to the device timezone.
+`owner_accounts` stores the owner UUID, a unique normalized username, a salted password hash, creation time, and a unique/check-constrained singleton flag. `auth_attempts` stores persistent login, registration, and password-reset rate-limit buckets. Auth.js uses encrypted JWT sessions and checks the stored owner UUID and password version on each session read; all private data entry points require that session. No multi-user feature is introduced. For date-only values, UTC midnight encodes a calendar date and display uses UTC date components; timed values are normal instants converted to the device timezone.
 
 `task_lists` belongs to a `todos` row and stores a nonblank name plus stable order. `task_list_items` belongs to a list and stores a nonblank title, optional URL and note, and stable order. Both foreign keys use `ON DELETE CASCADE`. Lists and their items remain a separate content type so task progress and completion history only measure actionable work.

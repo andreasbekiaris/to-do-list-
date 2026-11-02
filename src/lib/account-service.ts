@@ -1,5 +1,5 @@
 import type { AccountRepository } from "../db/account-repository";
-import { loginSchema, registrationSchema } from "./account-validation";
+import { loginSchema, passwordResetSchema, registrationSchema } from "./account-validation";
 import { hashPassword, matchesSetupKey, verifyPassword } from "./passwords";
 
 export class LoginThrottledError extends Error {}
@@ -28,4 +28,23 @@ export async function registerOwner(input: unknown, setupKey: string | undefined
   const passwordHash = await hashPassword(parsed.data.password);
   const created = await repository.createOwner(parsed.data.username, passwordHash);
   return created ? { created: true as const } : { error: "An account already exists. Please log in." };
+}
+
+export async function resetOwnerPassword(input: unknown, setupKey: string | undefined, repository: AccountRepository) {
+  const parsed = passwordResetSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (!setupKey || setupKey.length < 16) return { error: "Password reset isn’t available yet." };
+  if (!(await repository.consumeAttempt("reset", 5, 15 * 60))) {
+    return { error: "Too many reset attempts. Please try again in 15 minutes." };
+  }
+  const owner = await repository.getOwner();
+  const setupKeyMatches = matchesSetupKey(parsed.data.setupKey, setupKey);
+  const valid = owner?.username === parsed.data.username && setupKeyMatches;
+  if (!owner || !valid) return { error: "We couldn’t verify those details. Check your username and setup code." };
+  const passwordHash = await hashPassword(parsed.data.password);
+  if (!(await repository.updatePassword(owner.id, passwordHash))) {
+    return { error: "We couldn’t reset your password. Please try again later." };
+  }
+  await repository.clearPasswordAttempts();
+  return { reset: true as const };
 }

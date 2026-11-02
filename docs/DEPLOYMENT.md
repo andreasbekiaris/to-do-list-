@@ -19,7 +19,7 @@ Open **Project → Settings → Environment Variables** and add these for **Prod
 | Name | Value |
 | --- | --- |
 | `AUTH_SECRET` | Keep an existing valid secret, or generate a private random value of at least 32 characters |
-| `ACCOUNT_SETUP_KEY` | A separate private setup code, 16–256 characters; used only to create your account |
+| `ACCOUNT_SETUP_KEY` | A separate private setup code, 16–256 characters; used to create or recover your account |
 | `AUTH_URL` | `https://to-do-list-ten-pi-88.vercel.app` |
 | `DATABASE_URL` | Supplied by the Neon integration |
 
@@ -54,13 +54,14 @@ For later local development, use Development variables and a separate Neon devel
 2. Open `https://to-do-list-ten-pi-88.vercel.app/register`.
 3. Choose a username (3–32 characters) and password (at least 12 characters), confirm the password, and enter the **ACCOUNT_SETUP_KEY** value as the setup code.
 4. Click **Create account**. Then log in with your new username/password.
-5. After creating the account, you may remove `ACCOUNT_SETUP_KEY` from Vercel and redeploy. It is not needed for login, and keeping it does not permit a second account.
+5. Keep `ACCOUNT_SETUP_KEY` in Vercel to enable **Forgot password?** recovery. You may remove it and redeploy if you prefer to disable self-service resets; it is not needed for normal login, and keeping it does not permit a second account.
 
 ## 5. Verify Phase 1
 
 - Correct username/password opens the private workspace; **Sign out** returns to login.
 - A signed-out visit to `/` redirects to `/login`.
 - An incorrect password is rejected without revealing whether the username exists.
+- **Forgot password?** accepts the owner username and private setup code, replaces the password, and rejects the old password.
 - A new visit to `/register` redirects to login because the one owner account exists.
 - Log in with the same credentials on your phone to confirm access from another device.
 - `pnpm db:check` must succeed against the real Neon database.

@@ -72,6 +72,34 @@ test("username/password login rejects wrong passwords and supports logout", asyn
   await expect(page.getByRole("link", { name: "Create account" })).toHaveCount(0);
 });
 
+test("the login page supports setup-code password recovery", async ({ page }) => {
+  await register(page);
+  await page.getByRole("link", { name: "Forgot password?" }).click();
+  await expect(page).toHaveURL(/\/forgot-password$/);
+  const nextPassword = "a newly chosen memorable password";
+  await page.getByLabel("Username", { exact: true }).fill(username);
+  await page.getByLabel("Setup code", { exact: true }).fill("incorrect-code");
+  await page.getByLabel("New password", { exact: true }).fill(nextPassword);
+  await page.getByLabel("Confirm new password", { exact: true }).fill(nextPassword);
+  await page.getByRole("button", { name: "Update password", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "verify those details" })).toBeVisible();
+  await expect(page.getByLabel("Username", { exact: true })).toHaveValue(username);
+  await page.getByLabel("Setup code", { exact: true }).fill(setupKey);
+  await page.getByLabel("New password", { exact: true }).fill(nextPassword);
+  await page.getByLabel("Confirm new password", { exact: true }).fill(nextPassword);
+  await page.getByRole("button", { name: "Update password", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reset=1$/);
+  await expect(page.getByText("Password updated. Log in with your new password.")).toBeVisible();
+  await page.getByLabel("Username", { exact: true }).fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "incorrect" })).toBeVisible();
+  await page.getByLabel("Username", { exact: true }).fill(username);
+  await page.getByLabel("Password", { exact: true }).fill(nextPassword);
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "A little plan. A clearer day." })).toBeVisible();
+});
+
 test("registration closes after setup, even for an already-open registration form", async ({ page, context }) => {
   const stalePage = await context.newPage();
   await stalePage.goto("/register");
@@ -102,5 +130,7 @@ test("missing configuration leaves login and registration disabled", async ({ pa
   await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeDisabled();
   await page.getByRole("link", { name: "Create account" }).click();
   await expect(page.getByRole("button", { name: "Create account", exact: true })).toBeDisabled();
+  await page.goto("http://127.0.0.1:3101/forgot-password");
+  await expect(page.getByRole("button", { name: "Update password", exact: true })).toBeDisabled();
   expect((await page.request.get("http://127.0.0.1:3101/api/auth/session")).status()).toBe(503);
 });

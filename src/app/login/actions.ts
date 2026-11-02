@@ -3,9 +3,9 @@
 import { AuthError, CredentialsSignin } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
-import { isAuthConfigured, isRegistrationConfigured } from "@/lib/env";
+import { isAuthConfigured, isPasswordResetConfigured, isRegistrationConfigured } from "@/lib/env";
 import { requireUser } from "@/lib/require-user";
-import { registerOwner } from "@/lib/account-service";
+import { registerOwner, resetOwnerPassword } from "@/lib/account-service";
 import { accountRepository } from "@/lib/accounts";
 import { loginSchema, type AuthFormState } from "@/lib/account-validation";
 
@@ -37,6 +37,17 @@ export async function createAccount(_previous: AuthFormState, formData: FormData
     return { error: "We couldn’t create your account. Please try again later." };
   }
   redirect("/login?created=1");
+}
+
+export async function resetPassword(_previous: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  if (!isPasswordResetConfigured()) return { error: "Password reset isn’t available yet." };
+  try {
+    const result = await resetOwnerPassword(Object.fromEntries(formData), process.env.ACCOUNT_SETUP_KEY, accountRepository());
+    if (result.error) return { error: result.error };
+  } catch {
+    return { error: "We couldn’t reset your password. Please try again later." };
+  }
+  redirect("/login?reset=1");
 }
 
 export async function signOutOfApp() {

@@ -15,3 +15,7 @@ export function isRegistrationConfigured() {
   const length = process.env.ACCOUNT_SETUP_KEY?.length ?? 0;
   return isAuthConfigured() && length >= 16 && length <= 256;
 }
+
+export function isPasswordResetConfigured() {
+  return isRegistrationConfigured();
+}

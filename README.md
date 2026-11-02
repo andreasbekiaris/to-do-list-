@@ -69,7 +69,7 @@ the API off.
 
 Follow [the Vercel setup guide](docs/DEPLOYMENT.md) to connect Neon, set `AUTH_SECRET` and `ACCOUNT_SETUP_KEY`, and apply the migrations. Open `/register`, choose your username/password, and enter the private setup code. Once your account exists, registration closes. Login then needs only your username and password on each device.
 
-The setup code prevents a stranger from claiming the empty workspace first. It is not your login password, is never rendered into a page, and can be removed from Vercel after account creation. Passwords are stored as salted scrypt hashes. JWT sessions are checked against the current owner account. Old GitHub sessions are rejected.
+The setup code prevents a stranger from claiming the empty workspace first and lets the owner reset a forgotten password from the login page. It is not your login password and is never rendered into a page. Keep it private in Vercel if you want self-service recovery; removing it disables password resets without affecting login. Passwords are stored as salted scrypt hashes. JWT sessions are checked against the current owner account and password version, so a password reset closes existing sessions. Old GitHub sessions are rejected.
 
 ## Stack
 
@@ -102,7 +102,7 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Unit/integration tests cover password verification, setup-code validation, simultaneous registration, persistent rate limits, session authorization, SQL migrations, nested task persistence, stale mutation confirmations, cascade deletion, and deadline filtering. Desktop/mobile browser tests cover authentication and task creation/editing, three-level nesting, persistence in a second device context, dates across timezones, completion rollback, deletion, and anonymous action rejection. Test-only infrastructure runs PGlite behind a dummy Neon HTTP endpoint; application authentication has no test bypass. Keep these checks separate from live Neon/Vercel verification.
+Unit/integration tests cover password verification and recovery, setup-code validation, simultaneous registration, persistent rate limits, session authorization, SQL migrations, nested task persistence, stale mutation confirmations, cascade deletion, and deadline filtering. Desktop/mobile browser tests cover authentication, password recovery, task creation/editing, three-level nesting, persistence in a second device context, dates across timezones, completion rollback, deletion, and anonymous action rejection. Test-only infrastructure runs PGlite behind a dummy Neon HTTP endpoint; application authentication has no test bypass. Keep these checks separate from live Neon/Vercel verification.
 
 In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspace/.pnpm-store`, and run browser tests with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium pnpm test:e2e`. Ports 3100, 3101, and 3199 must be available.
 
@@ -110,6 +110,6 @@ In the cloud workspace use `pnpm install --frozen-lockfile --store-dir /workspac
 
 Edit `src/db/schema.ts`, then run `pnpm db:generate --name=describe_change`. Review and commit the new SQL and metadata. Apply explicitly with `pnpm db:migrate`, then verify with `pnpm db:check`. Never mutate the database during builds or requests, and do not change previously applied migrations.
 
-The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds task colors, `0003_task_date_ranges.sql` adds optional start dates, `0004_task_priorities.sql` adds validated priorities while defaulting existing tasks to None, and `0005_task_reference_lists.sql` adds named non-task lists and their ordered items. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts or 5 setup-code attempts per 15 minutes. Successful login clears the login counter. Email-based password recovery is not part of Phase 1.
+The owner and authentication-limit tables are in `0001_owner_password_auth.sql`. `0002_task_colors.sql` adds task colors, `0003_task_date_ranges.sql` adds optional start dates, `0004_task_priorities.sql` adds validated priorities while defaulting existing tasks to None, and `0005_task_reference_lists.sql` adds named non-task lists and their ordered items. Existing to-dos are preserved. Auth limits are global to this single-owner app: 10 login attempts, 5 registration attempts, or 5 password-reset attempts per 15 minutes. Successful login clears the login counter; a successful password reset clears its reset and login counters. Recovery uses the private setup code because the app does not store an email address.
 
 See [the product plan](docs/PLAN.md), [deployment steps](docs/DEPLOYMENT.md), and [agent conventions](CLAUDE.md). Stop after each phase for review.

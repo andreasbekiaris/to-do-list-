@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { createAccountRepository } from "../src/db/account-repository";
-import { authenticateOwner, registerOwner, LoginThrottledError } from "../src/lib/account-service";
+import { authenticateOwner, registerOwner, resetOwnerPassword, LoginThrottledError } from "../src/lib/account-service";
 import { hashPassword, verifyPassword } from "../src/lib/passwords";
 
 const client = new PGlite();
@@ -50,6 +50,22 @@ test("registration stores a hash, normalizes the username, and accepts correct c
   assert.equal(await authenticateOwner({ username: "my.owner", password: "x".repeat(129) }, repository), null);
 });
 
+test("the setup code resets the password and clears password-related limits", async () => {
+  await registerOwner(registration, setupKey, repository);
+  const nextPassword = "another memorable private password";
+  const reset = { username: " MY.OWNER ", setupKey, password: nextPassword, confirmPassword: nextPassword };
+  for (const data of [
+    { ...reset, username: "another.owner" },
+    { ...reset, setupKey: "incorrect-code" },
+    { ...reset, confirmPassword: "does not match" },
+  ]) assert.ok((await resetOwnerPassword(data, setupKey, repository)).error);
+  await repository.consumeAttempt("login", 10, 900);
+  assert.equal((await resetOwnerPassword(reset, setupKey, repository)).reset, true);
+  assert.equal(await authenticateOwner({ username: "my.owner", password }, repository), null);
+  assert.ok(await authenticateOwner({ username: "my.owner", password: nextPassword }, repository));
+  assert.equal((await client.query("SELECT * FROM auth_attempts WHERE bucket IN ('login', 'reset')")).rows.length, 0);
+});
+
 test("simultaneous registration creates exactly one owner", async () => {
   const results = await Promise.all([
     registerOwner(registration, setupKey, repository),
@@ -82,4 +98,14 @@ test("setup-code attempts are limited independently of login", async () => {
   }
   assert.match((await registerOwner(registration, setupKey, repository)).error ?? "", /Too many setup attempts/);
   assert.equal(await repository.getOwner(), null);
+});
+
+test("password-reset attempts are limited independently", async () => {
+  await registerOwner(registration, setupKey, repository);
+  const input = { ...registration, password: "a different secure password", confirmPassword: "a different secure password", setupKey: "wrong" };
+  for (let attempt = 0; attempt < 5; attempt++) {
+    assert.match((await resetOwnerPassword(input, setupKey, repository)).error ?? "", /verify those details/);
+  }
+  assert.match((await resetOwnerPassword({ ...input, setupKey }, setupKey, repository)).error ?? "", /Too many reset attempts/);
+  assert.ok(await authenticateOwner({ username: "my.owner", password }, repository));
 });

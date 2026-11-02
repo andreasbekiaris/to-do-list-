@@ -17,7 +17,12 @@ export function createAccountRepository(execute: Execute) {
         VALUES (${username}, ${passwordHash}) ON CONFLICT DO NOTHING RETURNING id`);
       return result.rows.length === 1;
     },
-    async consumeAttempt(bucket: "login" | "register", limit: number, seconds: number) {
+    async updatePassword(id: string, passwordHash: string) {
+      const result = await execute(sql`UPDATE owner_accounts SET password_hash = ${passwordHash}
+        WHERE id = ${id} RETURNING id`);
+      return result.rows.length === 1;
+    },
+    async consumeAttempt(bucket: "login" | "register" | "reset", limit: number, seconds: number) {
       const result = await execute(sql`INSERT INTO auth_attempts (bucket, attempts, resets_at)
         VALUES (${bucket}, 1, now() + ${seconds} * interval '1 second')
         ON CONFLICT (bucket) DO UPDATE SET
@@ -29,6 +34,9 @@ export function createAccountRepository(execute: Execute) {
     },
     async clearLoginAttempts() {
       await execute(sql`DELETE FROM auth_attempts WHERE bucket = 'login'`);
+    },
+    async clearPasswordAttempts() {
+      await execute(sql`DELETE FROM auth_attempts WHERE bucket IN ('login', 'reset')`);
     },
   };
 }
